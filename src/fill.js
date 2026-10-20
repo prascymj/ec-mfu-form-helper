@@ -9,6 +9,8 @@
 //   data-each="list" data-min="3"   on <tbody>; repeats its <template> row, paths inside start with "."
 // Every filled value is contenteditable on screen so the last wording fixes happen in place.
 
+import { downloadDoc, wordHtml } from "./word-export.js";
+
 const TH_MONTHS = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
   "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
 const STATUS_TH = { bachelor: "นักศึกษา ปริญญาตรี", master: "นักศึกษา ปริญญาโท",
@@ -256,6 +258,10 @@ export async function boot() {
     if (f) mount(JSON.parse(await f.text()));
   });
   document.getElementById("print").addEventListener("click", () => window.print());
+  // same Word-export the Code pipeline uses; derive the file name from the form page
+  const code = (location.pathname.split("/").pop() || "form").replace(/\.html$/, "");
+  document.getElementById("savedoc")?.addEventListener("click", () => downloadDoc(document, code));
+  window.ecWordHtml = () => wordHtml(document);
   const src = new URLSearchParams(location.search).get("data");
   if (src === "local") {
     // the project open in the main page (index.html), kept in this browser only
