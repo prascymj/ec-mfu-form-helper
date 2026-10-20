@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>วิธีใช้งาน - EC-MFU Form Helper</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="src/app.css">
+<style>
+  main.guide { max-width: 760px; }
+  ol.steps { list-style: none; counter-reset: s; margin: 0; padding: 0; }
+  ol.steps > li { counter-increment: s; position: relative; padding: 0 0 16px 46px; }
+  ol.steps > li::before { content: counter(s); position: absolute; left: 0; top: 0;
+    width: 30px; height: 30px; border-radius: var(--radius); background: var(--accent); color: var(--accent-ink);
+    font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  ol.steps > li:not(:last-child)::after { content: ""; position: absolute; left: 15px; top: 34px; bottom: 2px;
+    width: 2px; background: var(--line); }
+  ol.steps h3 { margin: 2px 0 4px; font-size: 16px; }
+  ol.steps p { margin: 0; color: var(--muted); font-size: 14px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin: 6px 0 0; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+  .legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+  .back { margin-bottom: 12px; }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <img class="logo" src="assets/ADTlogo.png" alt="สำนักวิชาเทคโนโลยีดิจิทัลประยุกต์ มฟล." onerror="this.style.display='none'">
+    <div>
+      <h1>วิธีใช้งาน</h1>
+      <div class="org">เตรียมเอกสารยื่น EC มฟล. - สำนักวิชาเทคโนโลยีดิจิทัลประยุกต์</div>
+    </div>
+  </div>
+  <div><a class="btn" href="index.html">เปิดเครื่องมือ</a></div>
+</header>
+
+<main class="guide">
+  <div class="card">
+    <p class="muted back">ทำตาม 5 ขั้นตอนสั้นๆ นี้ ใช้เวลาไม่กี่นาที</p>
+    <ol class="steps">
+      <li>
+        <h3>อัปโหลดไฟล์ข้อเสนอโครงการ</h3>
+        <p>ลากไฟล์ <b>.docx</b> (แนะนำ) หรือ .pdf ที่มีข้อความ / .md / .txt มาวางในกรอบ หรือคลิกเพื่อเลือกไฟล์ ระบบจะอ่านและดึงข้อมูลให้อัตโนมัติ (ไฟล์อยู่ในเบราว์เซอร์ของคุณ ไม่ถูกส่งออกไปที่ใด)</p>
+      </li>
+      <li>
+        <h3>ตรวจและเติมข้อมูลที่ยังว่าง</h3>
+        <p>ระบบจะกรอกข้อมูลลงแบบฟอร์มให้ แล้วติดป้ายสีบอกสถานะแต่ละช่อง แก้ไขหรือพิมพ์เพิ่มได้ทุกช่อง เน้นเติมช่อง <b>สีแดง</b> ให้ครบ และตรวจช่อง <b>สีเหลือง</b> ว่าถูกต้อง</p>
+        <div class="legend">
+          <span><i style="background:var(--ok)"></i> เขียว = ครบแล้ว</span>
+          <span><i style="background:var(--warn)"></i> เหลือง = เดามาให้ ควรตรวจ</span>
+          <span><i style="background:var(--todo)"></i> แดง = ต้องเติมเอง</span>
+        </div>
+      </li>
+      <li>
+        <h3>(ถ้าต้องการ) ใช้ตัวช่วยร่างด้วย Claude</h3>
+        <p>ในช่องที่ยังว่าง จะมีปุ่มตัวช่วย คัดลอกข้อความคำสั่ง (prompt) ไปวางใน Claude แล้วนำคำตอบ (JSON) กลับมาวาง ระบบจะเติมให้ (ไม่มีการเรียก AI อัตโนมัติ คุณเป็นคนทำเอง)</p>
+      </li>
+      <li>
+        <h3>บันทึกงานไว้ทำต่อ</h3>
+        <p>กดปุ่ม <b>บันทึกงาน (.json)</b> เพื่อเก็บไฟล์งานไว้ในเครื่อง ครั้งหน้ากด <b>เปิดงาน</b> เพื่อทำต่อได้ โดยไม่ต้องอัปโหลดข้อเสนอใหม่</p>
+      </li>
+      <li>
+        <h3>เปิดแต่ละแบบฟอร์มแล้วพิมพ์เป็น PDF</h3>
+        <p>เปิดแบบฟอร์มที่ต้องการ (AP 01_1, AP 01_2, AP 02, AP 03_1, แบบแจ้งค่าธรรมเนียม) กดปุ่ม <b>พิมพ์ / บันทึก PDF</b> แล้วเลือกปลายทางเป็น <b>Save as PDF</b> ขนาดกระดาษ A4</p>
+      </li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2>ข้อควรรู้</h2>
+    <ul class="manual">
+      <li>เอกสารที่ได้เป็น <b>ร่างให้ผู้วิจัยตรวจทาน</b> ก่อนยื่น ไม่ใช่การรับรองจริยธรรม</li>
+      <li>เครื่องมือ <b>ไม่ส่งและไม่บันทึกข้อมูล</b> ของคุณไว้ที่ใด ทุกอย่างทำงานในเบราว์เซอร์</li>
+      <li>เพื่อผลพิมพ์ที่ดีที่สุด แนะนำเปิดด้วย Google Chrome หรือ Microsoft Edge และติดตั้งฟอนต์ TH Sarabun New ในเครื่อง</li>
+    </ul>
+    <p style="margin-top:12px"><a class="btn primary" href="index.html">เริ่มใช้งานเครื่องมือ</a></p>
+  </div>
+</main>
+</body>
+</html>
