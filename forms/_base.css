@@ -40,6 +40,7 @@ body {
 .sheet { width: 210mm; margin: 16px auto; background: var(--paper); padding: 14mm 15mm 16mm 20mm;
   box-shadow: 0 1px 6px rgba(0,0,0,.15); }
 .run-head { display: flex; justify-content: space-between; font-size: 12pt; color: var(--muted); margin-bottom: 6mm; }
+.run-head .ve { font-style: normal; min-width: 2em; }
 
 h1.title { font-size: 16pt; font-weight: 700; text-align: center; margin: 0; }
 p.subtitle { text-align: center; margin: 0 0 4mm; }
@@ -135,12 +136,16 @@ ol.aff ol li::before { content: "4." counter(sub) "."; position: absolute; left:
 @page {
   size: A4;
   margin: 20mm 15mm 18mm 20mm;
-  @top-left { content: "Version............ Date........................."; font-family: "EC Sarabun", "TH Sarabun New", sans-serif; font-size: 12pt; color: #444; }
+  @top-left { content: ""; }
   @bottom-center { content: "หน้า " counter(page) " จาก " counter(pages); font-family: "EC Sarabun", "TH Sarabun New", sans-serif; font-size: 14pt; }
 }
 @media print {
   body { background: #fff; }
-  .bar, .run-head { display: none; }
+  .bar { display: none; }
+  /* print the typed Version/Date at the top of the first page (Chromium can't put a dynamic
+     value in the @page running header, so no every-page repeat) */
+  .run-head { color: #444; }
+  .run-head > span:last-child { display: none; }
   .sheet { width: auto; margin: 0; padding: 0; box-shadow: none; }
   .gap, .unknown { background: none; outline: none; }
 }
