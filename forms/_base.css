@@ -1,0 +1,154 @@
+/* EC-MFU form pages: A4, TH Sarabun New 16pt, CSS checkboxes, page numbers.
+   Shared by every forms/apXX.html. Screen gets a toolbar and highlights;
+   print gets plain black-on-white A4 with header/footer margin boxes. */
+
+@font-face { font-family: "EC Sarabun"; src: local("TH Sarabun New"), local("THSarabunNew"); font-weight: 400; }
+@font-face { font-family: "EC Sarabun"; src: local("TH Sarabun New Bold"), local("THSarabunNew-Bold"), local("THSarabunNew Bold"); font-weight: 700; }
+@font-face { font-family: "EC Sarabun"; src: local("TH Sarabun New Italic"), local("THSarabunNew-Italic"), local("THSarabunNew Italic"); font-weight: 400; font-style: italic; }
+
+:root {
+  --ink: #111; --muted: #555; --line: #000; --head: #d9d9d9; --paper: #fff; --bg: #e9e6df;
+  --tbd: #fff3b0; --tbd-line: #c9a400; --accent: #7a4b1e;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #121110; }
+}
+:root[data-theme="dark"] { --bg: #121110; }
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: "EC Sarabun", "TH Sarabun New", "Sarabun", sans-serif;
+  font-size: 16pt; line-height: 1.2;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+
+/* toolbar (screen only) */
+.bar { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  justify-content: space-between; padding: 8px 16px; background: #fff; border-bottom: 1px solid #999;
+  font-family: system-ui, sans-serif; font-size: 13px; line-height: 1.4; color: #222; }
+.bar b { font-size: 14px; }
+.bar .note { color: #666; }
+.bar .stat { color: #7a5b00; }
+.bar button, .bar label.btn { font: inherit; padding: 5px 12px; border: 1px solid var(--accent); background: transparent;
+  color: var(--accent); border-radius: 6px; cursor: pointer; }
+.bar button:hover, .bar label.btn:hover { background: var(--accent); color: #fff; }
+.bar input[type=file] { display: none; }
+
+/* sheet: on screen one long A4-wide sheet; print paginates by @page */
+.sheet { width: 210mm; margin: 16px auto; background: var(--paper); padding: 14mm 15mm 16mm 20mm;
+  box-shadow: 0 1px 6px rgba(0,0,0,.15); }
+.run-head { display: flex; justify-content: space-between; font-size: 12pt; color: var(--muted); margin-bottom: 6mm; }
+
+h1.title { font-size: 16pt; font-weight: 700; text-align: center; margin: 0; }
+p.subtitle { text-align: center; margin: 0 0 4mm; }
+p { margin: 0; }
+.note-line { margin: 2mm 0; }
+.blue { color: #1f4e9c; }
+.ital { font-style: italic; }
+u.b, .ul { text-decoration: underline; }
+
+/* form tables */
+table.f { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 0 0 3mm; }
+table.f td, table.f th { border: 1px solid var(--line); padding: 0.6mm 1.8mm; vertical-align: top; text-align: left;
+  font-weight: 400; overflow-wrap: break-word; }
+
+/* Justified text (both edges flush), Thai style: extra space is spread between characters
+   instead of piling up at the few spaces a Thai line has. Lines still break only between
+   words (Chrome's Thai dictionary); nothing is hyphenated or split inside a word. */
+.sheet .para, .sheet .body, .sheet ol.aff li, .sheet ol.notes li, .sheet .note-line, .sheet .opt,
+.sheet td.just, .sheet .vol li, .sheet .casebox .body {
+  text-align: justify; text-justify: inter-character; hyphens: none; word-break: normal;
+}
+/* table cells are justified only when fill.js marks them .just (long prose in a wide cell);
+   short or narrow cells stay left so their few words are not letter-spaced */
+.sheet table.gantt td { text-align: left; }
+.sheet table.gantt td.m, .sheet table.gantt tr.hs td { text-align: center; }
+.nobreak { overflow-wrap: normal; word-break: keep-all; white-space: nowrap; }
+.nobreak:has(wbr) { white-space: normal; }
+table.f .h { background: var(--head); font-weight: 700; }
+table.f .hs { background: var(--head); }
+table.f .c { text-align: center; }
+table.f .lab { background: none; }
+table.f tr { break-inside: avoid; }
+/* a row too tall to keep whole would leave a half-empty page; let it split (fill.js marks it) */
+table.f tr.long, table.g tr.long { break-inside: auto; }
+/* running text needs room for TH Sarabun's tall upper marks, or they bleed across a page break;
+   table rows never split across pages, so cells keep the tighter Word-like spacing */
+.sheet, .sheet p, .sheet li, .sheet h1, .sheet h2 { line-height: 1.34; }
+.sheet table.f td, .sheet table.f td p { line-height: 1.2; }
+.stack table.f { margin: 0 0 -1px; }
+.stack { margin-bottom: 4mm; }
+table.f .yn { white-space: nowrap; }
+.indent { padding-left: 7mm !important; }
+.lines p + p { margin-top: 1mm; }
+
+/* checkbox drawn with CSS: [  ] / [ / ] like the official form */
+.cb { display: inline-block; width: 1.9em; text-align: center; white-space: nowrap; }
+.cb::before { content: "[\00a0\00a0\00a0]"; }
+.cb.on::before { content: "[\00a0/\00a0]"; font-weight: 700; }
+
+/* filled values vs. gaps */
+.v { font-weight: 400; }
+.v.multi { white-space: pre-wrap; }
+/* An empty field prints as a row of dots on the text baseline, like the "......" of the
+   Word form. (A bottom border on an inline-block sits at the descender edge, visibly
+   below the text; Chrome draws no underline under generated blank spaces.) */
+.gap { text-decoration: none !important; }
+.gap:empty::before { content: "......................................"; }
+/* alone in a table cell, or a paragraph of its own: a full-width dotted rule instead */
+table.f td > .gap:only-child, .gap.full, .blk.gap { display: block; text-decoration: none; border-bottom: 1px dotted #000; }
+table.f td > .gap:only-child::before, .gap.full::before, .blk.gap::before { content: none; }
+table.f td > .gap:only-child { height: 1.2em; }
+.gap.full { height: 1.25em; }
+
+/* screen-only highlights for things the researcher must still fill or check */
+@media screen {
+  .gap, .unknown { background: var(--tbd); }
+  .unknown { outline: 1px dashed var(--tbd-line); outline-offset: -1px; }
+  [contenteditable="true"]:focus { outline: 2px solid var(--accent); }
+}
+
+/* EC guidance text (blue on the official form): screen only, the form says to delete it before submitting */
+.hint { color: #1f4e9c; font-size: 13pt; border-left: 3px solid #1f4e9c; padding: 0 0 0 2mm; margin: 1mm 0; }
+.blk.gap { height: 2.4em; }
+.para { text-indent: 10mm; margin: 0 0 1mm; }
+.para .v.multi { display: block; text-indent: 0; }
+h2.sec { font-size: 16pt; font-weight: 700; margin: 3mm 0 1mm; break-after: avoid; }
+.hint.inl { display: inline; border: 0; padding: 0; }
+@media print { .hint, .hint.inl { display: none; } }
+
+/* lists in the affirmation */
+ol.aff { margin: 1mm 0 0; padding-left: 7mm; }
+ol.aff li { margin: 0 0 1mm; }
+ol.aff ol { padding-left: 9mm; list-style: none; counter-reset: sub; }
+ol.aff ol li { counter-increment: sub; position: relative; }
+ol.aff ol li::before { content: "4." counter(sub) "."; position: absolute; left: -9mm; }
+.sign { margin: 10mm 0 0 45%; text-align: center; }
+.sign p { margin: 0 0 1mm; }
+.newpage { break-before: page; }
+.keep { break-inside: avoid; }
+.staff hr { border: 0; border-top: 1px solid #000; margin: 0 0 4mm; }
+
+/* print */
+@page {
+  size: A4;
+  margin: 20mm 15mm 18mm 20mm;
+  @top-left { content: "Version............ Date........................."; font-family: "EC Sarabun", "TH Sarabun New", sans-serif; font-size: 12pt; color: #444; }
+  @bottom-center { content: "หน้า " counter(page) " จาก " counter(pages); font-family: "EC Sarabun", "TH Sarabun New", sans-serif; font-size: 14pt; }
+}
+@media print {
+  body { background: #fff; }
+  .bar, .run-head { display: none; }
+  .sheet { width: auto; margin: 0; padding: 0; box-shadow: none; }
+  .gap, .unknown { background: none; outline: none; }
+}
+
+/* phone width: keep the sheet readable, allow horizontal scroll inside tables only */
+@media screen and (max-width: 820px) {
+  .sheet { width: auto; margin: 0; padding: 16px; box-shadow: none; font-size: 14pt; }
+  .tw { overflow-x: auto; }
+  .tw table.f { min-width: 640px; }
+  .sign { margin-left: 0; }
+}

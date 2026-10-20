@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AP 02 Protocol</title>
+<link rel="stylesheet" href="_base.css">
+<style>
+@page { @top-right { content: "AP 02/2026"; font-family: "EC Sarabun", "TH Sarabun New", sans-serif; font-size: 12pt; color: #444; } }
+/* AP 02 uses grey label cells and light rules rather than a full grid */
+table.g { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 1mm 0 3mm; }
+table.g td { padding: 0.8mm 2mm; vertical-align: top; border-bottom: 1px solid #bbb; line-height: 1.2; overflow-wrap: break-word; }
+table.g .lab { background: var(--head); }
+table.g .hs td, table.g td.hs { background: var(--head); }
+table.g tr { break-inside: avoid; }
+table.g .c { text-align: center; }
+table.box { border: 1px solid #000; }
+h2.n { font-size: 16pt; font-weight: 400; margin: 4mm 0 1mm; break-after: avoid; }
+h3.n { font-size: 16pt; font-weight: 400; margin: 2mm 0 0.5mm 6mm; break-after: avoid; }
+.body { margin: 0 0 1mm 10mm; }
+.body .v.multi { display: block; }
+.gantt td { padding: 0.5mm 1mm; font-size: 14pt; }
+.gantt td.m { text-align: center; }
+.cat td.k { font-weight: 400; }
+.money { text-align: right; }
+table.g td.yn { white-space: nowrap; }
+/* Gantt: a ticked month is a shaded bar, not a [ / ] box */
+.gantt td.m.on { background: #8c8c8c; }
+.gantt.wide td { font-size: 12.5pt; padding: 0.5mm 0.6mm; }
+.gantt tr.hs td.m { font-size: 12pt; line-height: 1.1; }
+</style>
+</head>
+<body>
+<div class="bar">
+  <div><b>AP 02/2026 แบบเสนอโครงการวิจัยเพื่อพิจารณา</b> <span class="note">ร่างให้ผู้วิจัยตรวจ ไม่ใช่การรับรองจริยธรรม; ข้อความสีน้ำเงินคือคำแนะนำของ EC จะไม่พิมพ์ออก</span><br><span class="stat" id="stat"></span></div>
+  <div><label class="btn">เปิดไฟล์ JSON<input type="file" id="json-file" accept=".json"></label> <button id="print">พิมพ์ / บันทึก PDF</button></div>
+</div>
+
+<div class="sheet"></div>
+
+<template id="form-src">
+<div class="run-head"><span>Version............ Date.........................</span><span>AP 02/2026</span></div>
+<h1 class="title" style="margin-bottom:3mm">แบบเสนอโครงการวิจัยเพื่อพิจารณา</h1>
+
+<h2 class="n">1. ชื่อโครงการวิจัย (Title)</h2>
+<table class="g box"><tr><td>(ชื่อภาษาไทย) <span data-f="meta.title_th"></span></td></tr><tr><td>(ชื่อภาษาอังกฤษ) <span data-f="meta.title_en"></span></td></tr></table>
+
+<h2 class="n">2. สาขาวิชาที่ทำการวิจัย</h2>
+<p class="hint">ระบุสาขา เช่น แพทยศาสตร์ (ระบุสาขาย่อย) ทันตแพทยศาสตร์ สาธารณสุขศาสตร์ เภสัชศาสตร์ พยาบาลศาสตร์ สหเวชศาสตร์ เทคนิคการแพทย์ สังคมศาสตร์ เป็นต้น</p>
+<p class="body"><span data-f="methodology.research_field"></span></p>
+
+<h2 class="n">3. ผู้วิจัย ผู้วิจัยร่วม และที่ปรึกษา</h2>
+<div class="tw"><table class="g">
+  <colgroup><col style="width:8%"><col style="width:26%"><col style="width:30%"><col></colgroup>
+  <tr class="hs"><td colspan="4">3.1 ผู้วิจัยหลัก หรือ หัวหน้าโครงการวิจัย (Principal Investigator)</td></tr>
+  <tr><td colspan="2" class="lab">ตำแหน่งวิชาการ-ยศ-ชื่อ-สกุล</td><td colspan="2"><span data-f="principal_investigator.title_th"></span></td></tr>
+  <tr><td colspan="2" class="lab">สาขาวิชาและหน่วยงาน</td><td colspan="2"><span data-f="principal_investigator.affiliation"></span><span data-if="principal_investigator.student_year"> ชั้นปี <span data-f="principal_investigator.student_year"></span></span></td></tr>
+  <tr><td colspan="2" class="lab">ที่อยู่ (ที่ทำงาน)</td><td colspan="2"><span data-f="principal_investigator.address"></span></td></tr>
+  <tr><td colspan="2" class="lab">เบอร์โทรศัพท์</td><td colspan="2"><span data-f="principal_investigator.phone" class="nobreak"></span></td></tr>
+  <tr><td colspan="2" class="lab">อีเมล</td><td colspan="2"><span data-f="principal_investigator.email" data-fmt="email" class="nobreak"></span></td></tr>
+  <tr class="hs"><td colspan="4">3.2 ผู้วิจัยร่วม (Co-Investigators) (นักศึกษา ให้ระบุชั้นปี)</td></tr>
+  <tr class="hs"><td class="c">ลำดับ</td><td>ตำแหน่งวิชาการ-ยศ-ชื่อ-สกุล</td><td>สาขาวิชาและหน่วยงาน</td><td>เบอร์โทร / อีเมล</td></tr>
+  <tbody data-each="co_investigators" data-min="3"><template>
+    <tr><td class="c" data-i></td><td><span data-f=".title_th"></span></td><td><span data-f=".affiliation"></span></td><td><span data-f=".phone" class="nobreak"></span><br><span data-f=".email" data-fmt="email" class="nobreak"></span></td></tr>
+  </template></tbody>
+  <tr class="hs"><td colspan="4">3. ที่ปรึกษาโครงการวิจัย (Research Advisor)</td></tr>
+  <tr class="hs"><td class="c">ลำดับ</td><td>ตำแหน่งวิชาการ-ยศ-ชื่อ-สกุล</td><td>สาขาวิชาและหน่วยงาน</td><td>เบอร์โทร / อีเมล</td></tr>
+  <tbody data-each="advisors" data-min="2"><template>
+    <tr><td class="c" data-i></td><td><span data-f=".title_th"></span></td><td><span data-f=".affiliation"></span></td><td><span data-f=".phone" class="nobreak"></span><br><span data-f=".email" data-fmt="email" class="nobreak"></span></td></tr>
+  </template></tbody>
+  <tr class="hs"><td colspan="4">4. ผู้ประสานงานโครงการวิจัย (Research Coordinator)</td></tr>
+  <tr><td colspan="2" class="lab">ตำแหน่งวิชาการ-ยศ-ชื่อ-สกุล</td><td colspan="2"><span data-f="coordinator.title_th"></span></td></tr>
+  <tr><td colspan="2" class="lab">เบอร์โทรศัพท์</td><td colspan="2"><span data-f="coordinator.phone" class="nobreak"></span></td></tr>
+  <tr><td colspan="2" class="lab">อีเมล</td><td colspan="2"><span data-f="coordinator.email" data-fmt="email" class="nobreak"></span></td></tr>
+</table></div>
+
+<h2 class="n">4. ช่วงเวลาที่ทำการวิจัย</h2>
+<table class="g"><colgroup><col style="width:52%"><col></colgroup>
+  <tr><td class="lab">เดือน/ปี ที่จะเริ่มเก็บข้อมูลในผู้เข้าร่วมการวิจัย</td><td>เดือน <span data-f="meta.start_date" data-fmt="monthyear"></span></td></tr>
+  <tr><td class="lab">ระยะเวลาที่จะเก็บข้อมูลในผู้เข้าร่วมการวิจัย</td><td><span data-f="meta.duration_months"></span> เดือน</td></tr>
+  <tr><td class="lab">เดือน/ปี ที่คาดว่าจะสิ้นสุดการวิจัย</td><td>เดือน <span data-f="meta.end_date" data-fmt="monthyear"></span></td></tr>
+</table>
+
+<h2 class="n">5. สถานที่ทำการวิจัย</h2>
+<p class="hint">ทำการวิจัยที่สถาบันเดียวหรือสหสถาบัน (multicentre) ระบุห้อง ตึก อาคาร</p>
+<p class="body"><span data-f="meta.sites"></span><span data-if="meta.is_multicenter"> (สหสถาบัน: <span data-f="meta.multicenter_institutions"></span>)</span></p>
+
+<h2 class="n">6. ความสำคัญของปัญหาที่จะทำการวิจัย</h2>
+<p class="hint">สรุปความสำคัญและขนาดของปัญหา เหตุผล (rationale) และช่องว่างความรู้ (gap of knowledge)</p>
+<p class="body para"><span data-f="methodology.rationale" class="blk"></span></p>
+
+<h2 class="n">7. วัตถุประสงค์ของการวิจัย</h2>
+<table class="g"><colgroup><col style="width:30%"><col></colgroup>
+  <tr><td class="lab">7.1 วัตถุประสงค์หลัก</td><td><span data-f="methodology.primary_objective"></span></td></tr>
+  <tr><td class="lab">7.2 วัตถุประสงค์รอง</td><td><span data-f="methodology.secondary_objectives" data-fmt="list"></span></td></tr>
+</table>
+
+<h2 class="n">8. ประโยชน์ที่จะได้จากการวิจัย</h2>
+<p class="hint">อธิบายว่า ผลการวิจัยจะสามารถนำไปใช้ในการแก้ปัญหาหรือมีประโยชน์อย่างไร</p>
+<p class="body para"><span data-f="methodology.expected_benefits" class="blk"></span></p>
+
+<h2 class="n">9. การรวบรวมรายงานที่เกี่ยวข้องกับการวิจัยที่จะกระทำ</h2>
+<p class="hint">เคยมีรายงานการวิจัยลักษณะนี้มาก่อนหรือไม่ ผลเป็นอย่างไร (อ้างอิงแบบ Vancouver หรือ APA); ถ้าเป็นยา สมุนไพร ผลิตภัณฑ์ธรรมชาติ เครื่องสำอาง อาหารเสริม หรือเครื่องมือแพทย์ ให้เน้นทบทวนด้านความปลอดภัย ผลข้างเคียง หรือเหตุการณ์ไม่พึงประสงค์</p>
+<p class="body para"><span data-f="methodology.literature_review" class="blk"></span></p>
+
+<h2 class="n">10. รูปแบบการวิจัย</h2>
+<p class="hint">ระบุรูปแบบ Study design ที่สามารถตอบคำถามการวิจัยได้</p>
+<p class="body"><span data-f="methodology.study_design" class="blk"></span></p>
+
+<h2 class="n">11. ลักษณะตัวอย่างหรือประชากรที่ทำการศึกษา</h2>
+<table class="g"><colgroup><col style="width:34%"><col style="width:9%"><col></colgroup>
+  <tr><td class="lab">11.1 ประชากรเป้าหมาย</td><td colspan="2"><span data-f="methodology.target_population"></span></td></tr>
+  <tr><td class="lab">11.2 ขนาดตัวอย่าง จำนวนผู้เข้าร่วมการวิจัยที่ต้องการกี่คน</td><td colspan="2"><span data-f="methodology.sample_size"></span> คน<br><span data-f="methodology.sample_size_calculation"></span></td></tr>
+  <tr><td class="lab" rowspan="5">11.3 วิธีการเข้าถึงและสรรหาผู้เข้าร่วมการวิจัย (Recruitment Process)</td>
+      <td class="c"><span data-c="ap02.recruit.direct"></span></td><td>เชิญชวนโดยตรง อธิบายรายละเอียด <span data-f="methodology.recruitment_process"></span></td></tr>
+  <tr><td class="c"><span data-c="ap02.recruit.online"></span></td><td>ผ่านสื่อสังคมออนไลน์หรือแอปพลิเคชั่น (ส่งข้อความให้คณะกรรมการพิจารณา)</td></tr>
+  <tr><td class="c"><span data-c="ap02.recruit.clinician"></span></td><td>ขอความร่วมมือผ่านแพทย์/พยาบาล</td></tr>
+  <tr><td class="c"><span data-c="ap02.recruit.poster"></span></td><td>แผ่นป้ายประชาสัมพันธ์ (ระบุสถานที่ติดแผ่นป้าย และส่งแผ่นป้ายให้คณะกรรมการพิจารณา)</td></tr>
+  <tr><td class="c"><span data-c="ap02.recruit.other"></span></td><td>อื่นๆ อธิบายรายละเอียด <span data-f="ap02.recruit.other" data-if="ap02.recruit.other"></span></td></tr>
+  <tr><td class="lab">11.4 เกณฑ์การคัดเข้าร่วมการวิจัย (Inclusion criteria)</td><td colspan="2"><span data-f="methodology.inclusion_criteria" data-fmt="list"></span></td></tr>
+  <tr><td class="lab">11.5 เกณฑ์การคัดออกจากการวิจัย (Exclusion criteria)</td><td colspan="2"><span data-f="methodology.exclusion_criteria" data-fmt="list"></span></td></tr>
+  <tr><td class="lab">11.6 เกณฑ์การถอนออกจากการวิจัย (Withdrawal criteria)</td><td colspan="2"><span data-f="methodology.withdrawal_criteria" data-fmt="list"></span></td></tr>
+  <tr><td class="lab">11.7 เกณฑ์การยุติการวิจัยก่อนกำหนด (Early termination criteria)</td><td colspan="2"><span data-f="methodology.early_termination_criteria" data-fmt="list"></span></td></tr>
+</table>
+
+<h2 class="n">12. ระเบียบวิธีวิจัย</h2>
+<h3 class="n">12.1 การดำเนินการวิจัย</h3>
+<p class="body">12.1.1 การดำเนินการวิจัยโดยละเอียด <span class="hint inl">(แนบ Flow chart หรือรูปประกอบ)</span></p>
+<p class="body para"><span data-f="methodology.procedures" class="blk"></span></p>
+<p class="body">12.1.2 การแบ่งกลุ่มและการดำเนินการวิจัยในแต่ละกลุ่ม: <span data-f="ap02.grouping"></span></p>
+<div data-if="classification.has_placebo"><p class="body">12.1.3 การใช้ยาหลอก (placebo / control): เหตุผลความจำเป็นและแนวทางป้องกันอันตรายในกลุ่มที่ได้รับยาหลอก</p><p class="body para"><span data-f="ap02.placebo_rationale" class="blk"></span></p></div>
+<div data-if="classification.has_future_biobank"><p class="body">12.1.4 การเก็บตัวอย่างชีวภาพเพื่อใช้ในอนาคต: สถานที่เก็บ ระยะเวลาจัดเก็บ และการขอความยินยอมล่วงหน้า (แนบ AP 03_2/2026)</p><p class="body para"><span data-f="ap02.biobank_plan" class="blk"></span></p></div>
+<div data-if="risks.audio_video_recording"><p class="body">12.1.5 การถ่ายภาพหรือบันทึกเสียง: วิธีรักษาความลับของข้อมูลผู้เข้าร่วมการวิจัย</p><p class="body para"><span data-f="ap02.recording_protection" class="blk"></span></p></div>
+<p class="body">12.1.6 เมื่องานวิจัยเสร็จสิ้น มีการดำเนินการอย่างไรกับผู้เข้าร่วมการวิจัย: <span data-f="benefits.post_trial_care"></span></p>
+
+<h3 class="n">12.2 งานวิจัยที่เป็นเรื่องเฉพาะ</h3>
+<p class="hint">หัวข้อที่ตอบ "ไม่ใช่" แสดงเพียงบรรทัดเดียวตามแบบฟอร์ม (ตัดรายละเอียดออก) หัวข้อที่ตอบ "ใช่" ต้องตอบรายละเอียดให้ครบ</p>
+<table class="g cat"><colgroup><col><col style="width:12%"><col style="width:14%"></colgroup>
+  <tr><td>A. งานวิจัยเกี่ยวกับยา (Investigational Drug)</td><td class="yn"><span data-yn="classification.has_drug" data-v="1"></span> ใช่</td><td class="yn"><span data-yn="classification.has_drug" data-v="0"></span> ไม่ใช่</td></tr>
+  <tr data-if="classification.has_drug"><td colspan="3" class="indent">ชื่อยา (ทุกชนิดที่ใช้) <span data-f="classification.drug_names"></span><br>
+    <span data-c="ap02.drug.unapproved"></span> ยายังไม่ได้รับการรับรองจาก อย. &nbsp; <span data-c="ap02.drug.standard"></span> ขึ้นทะเบียน อย.แล้ว ใช้ในขนาดยามาตรฐานและข้อบ่งชี้ที่ได้รับการรับรอง<br>
+    <span data-c="ap02.drug.nonstandard_dose"></span> ขึ้นทะเบียน อย. แล้ว แต่ขนาดยาไม่ใช่ขนาดมาตรฐาน &nbsp; <span data-c="ap02.drug.off_label"></span> ขึ้นทะเบียน อย. แล้ว แต่ใช้ในข้อบ่งชี้ต่างจากที่ได้รับการรับรอง</td></tr>
+
+  <tr><td>B. งานวิจัยที่มีการตรวจวินิจฉัยหรือทำหัตถการ นอกเหนือจากการปฏิบัติทางคลินิกปกติ</td><td class="yn"><span data-yn="classification.has_procedure" data-v="1"></span> ใช่</td><td class="yn"><span data-yn="classification.has_procedure" data-v="0"></span> ไม่ใช่</td></tr>
+  <tr data-if="classification.has_procedure"><td colspan="3" class="indent">
+    <span data-c="ap02.proc.specimen"></span> การเจาะเลือดหรือเก็บตัวอย่างชีวภาพ ระบุ <span data-f="ap02.proc.specimen" data-if="ap02.proc.specimen"></span><br>
+    <span data-c="ap02.proc.ct"></span> การตรวจเอกซเรย์คอมพิวเตอร์ &nbsp; <span data-c="ap02.proc.high_dose"></span> การตรวจที่ได้รับปริมาณรังสีสูงเพิ่มเติมจากปกติ &nbsp; <span data-c="ap02.proc.radiation"></span> การฉายรังสีเพิ่มเติมจากปกติ<br>
+    <span data-c="ap02.proc.anesthesia"></span> การดมยาสลบ/การผ่าตัด เพิ่มเติมจากปกติ &nbsp; <span data-c="ap02.proc.other"></span> อื่นๆ เพิ่มเติมจากปกติ<br>รายละเอียด <span data-f="classification.procedure_detail"></span></td></tr>
+
+  <tr><td>C. งานวิจัยเกี่ยวกับอาหาร: ผลิตภัณฑ์อาหาร</td><td class="yn"><span data-yn="classification.has_food_product" data-v="1"></span> ใช่</td><td class="yn"><span data-yn="classification.has_food_product" data-v="0"></span> ไม่ใช่</td></tr>
+  <tbody data-if="classification.has_food_product">
+    <tr><td colspan="3" class="indent">คุณลักษณะเฉพาะ (สูตรส่วนประกอบ ที่มาของวัตถุดิบ และรูปแบบ): <span data-f="classification.food_detail"></span></td></tr>
+    <tr><td colspan="3" class="indent">กระบวนการเตรียม ขั้นตอนการผลิต: <span data-f="ap02.food.preparation"></span></td></tr>
+    <tr><td colspan="3" class="indent">วิธีการบริโภคและวิธีการเก็บรักษา: <span data-f="ap02.food.consumption"></span></td></tr>
+    <tr><td colspan="3" class="indent">ข้อมูลความปลอดภัยของอาหาร (พิษวิทยา การก่อภูมิแพ้ การศึกษาในสัตว์ทดลองและในมนุษย์) (ถ้ามี): <span data-f="ap02.food.safety"></span></td></tr>
+    <tr><td colspan="3" class="indent">ชนิดและปริมาณสารอาหาร เทียบบัญชีหมายเลข 3 ท้ายประกาศกระทรวงสาธารณสุข (ฉบับที่ 445) พ.ศ. 2566: <span data-f="ap02.food.nutrients"></span></td></tr>
+    <tr><td colspan="3" class="indent">ชนิดและอัตราส่วนของวัตถุเจือปนอาหาร เทียบบัญชีหมายเลข 1 และ 2 ท้ายประกาศกระทรวงสาธารณสุข (ฉบับที่ 418) พ.ศ. 2563: <span data-f="ap02.food.additives"></span></td></tr>
+    <tr><td colspan="3" class="indent">มาตรการป้องกันการปนเปื้อนจุลินทรีย์ สารพิษตกค้าง หรือสารพิษอื่น: <span data-f="ap02.food.contamination"></span></td></tr>
+  </tbody>
+
+  <tr><td>D. งานวิจัยเกี่ยวกับอาหาร: ผลิตภัณฑ์เสริมอาหาร</td><td class="yn"><span data-yn="classification.has_dietary_supplement" data-v="1"></span> ใช่</td><td class="yn"><span data-yn="classification.has_dietary_supplement" data-v="0"></span> ไม่ใช่</td></tr>
+  <tbody data-if="classification.has_dietary_supplement">
+    <tr><td colspan="3" class="indent">คุณลักษณะเฉพาะ (สูตรส่วนประกอบ ที่มาของวัตถุดิบ และรูปแบบ): <span data-f="classification.supplement_detail"></span></td></tr>
+    <tr><td colspan="3" class="indent">วิธีการบริโภคและวิธีการเก็บรักษา: <span data-f="ap02.supp.consumption"></span></td></tr>
+    <tr><td colspan="3" class="indent">ข้อมูลความปลอดภัย: <span data-f="ap02.supp.safety"></span></td></tr>
+    <tr><td colspan="3" class="indent">ปริมาณวิตามินหรือแร่ธาตุ (เทียบประกาศกระทรวงสาธารณสุข ฉบับที่ 448 พ.ศ. 2566): <span data-f="ap02.supp.vitamins"></span></td></tr>
+    <tr><td colspan="3" class="indent">การใช้วัตถุเจือปนอาหาร (เทียบประกาศกระทรวงสาธารณสุข ฉบับที่ 418 พ.ศ. 2563): <span data-f="ap02.supp.additives"></span></td></tr>
+    <tr><td colspan="3" class="indent">มาตรการป้องกันการปนเปื้อน: <span data-f="ap02.supp.contamination"></span></td></tr>
+    <tr><td colspan="3" class="indent">ผู้ผลิตหรือผู้นำเข้า: <span data-f="ap02.supp.manufacturer"></span></td></tr>
+  </tbody>
+
+  <tr><td>E. งานวิจัยเกี่ยวกับผลิตภัณฑ์สมุนไพร</td><td class="yn"><span data-yn="classification.has_herbal" data-v="1"></span> ใช่</td><td class="yn"><span data-yn="classification.has_herbal" data-v="0"></span> ไม่ใช่</td></tr>
+  <tbody data-if="classification.has_herbal">
+    <tr><td colspan="3" class="indent">ชนิด: <span data-c="ap02.herbal.drug"></span> ผลิตภัณฑ์สมุนไพรที่เป็นยา เพื่อรักษาโรค &nbsp; <span data-c="ap02.herbal.health"></span> ผลิตภัณฑ์สมุนไพรเพื่อสุขภาพ</td></tr>
+    <tr><td colspan="3" class="indent">ชื่อวิทยาศาสตร์ (ส่วนประกอบสมุนไพรทุกตัว) และสูตรตำรับ (%w/w): <span data-f="classification.herbal_detail"></span></td></tr>
+    <tr><td colspan="3" class="indent">ข้อมูลอ้างอิงทางสุขภาพ: <span data-c="ap02.herbal.lab"></span> ห้องปฏิบัติการ <span data-c="ap02.herbal.animal"></span> สัตว์ทดลอง <span data-c="ap02.herbal.human"></span> มนุษย์ <span data-c="ap02.herbal.textbook"></span> ตำรา หรือ บัญชียาหลักแห่งชาติ</td></tr>
+    <tr><td colspan="3" class="indent">กรรมวิธีการเตรียม การควบคุมคุณภาพ เอกสารทะเบียนผลิตภัณฑ์ และระดับการผลิต: <span data-f="ap02.herbal.production"></span></td></tr>
+  </tbody>
+
+  <tr><td>F. งานวิจัยเกี่ยวกับการพัฒนาเครื่องสำอาง</td><td class="yn"><span data-yn="classification.has_cosmetic" data-v="1"></span> ใช่</td><td class="yn"><span data-yn="classification.has_cosmetic" data-v="0"></span> ไม่ใช่</td></tr>
+  <tbody data-if="classification.has_cosmetic">
+    <tr><td colspan="3" class="indent">รูปแบบการใช้: <span data-c="ap02.cos.leave_on"></span> ใช้แล้วไม่ล้างออก (Leave-on) &nbsp; <span data-c="ap02.cos.rinse_off"></span> ใช้แล้วล้างออก (Rinse-off)</td></tr>
+    <tr><td colspan="3" class="indent">ส่วนประกอบของตำรับและปริมาณ (%w/w) และสารสกัดจากพืช (ถ้ามี): <span data-f="classification.cosmetic_detail"></span></td></tr>
+    <tr><td colspan="3" class="indent">ข้อมูลความปลอดภัยของสารในตำรับ (เช่น COSING) กรรมวิธีการเตรียม การควบคุมคุณภาพ ชื่อการค้า เลขทะเบียน สถานที่ผลิต: <span data-f="ap02.cos.safety"></span></td></tr>
+  </tbody>
+
+  <tr><td>G. งานวิจัยเกี่ยวกับเครื่องมือแพทย์</td><td class="yn"><span data-yn="classification.has_medical_device" data-v="1"></span> ใช่</td><td class="yn"><span data-yn="classification.has_medical_device" data-v="0"></span> ไม่ใช่</td></tr>
+  <tbody data-if="classification.has_medical_device">
+    <tr><td colspan="3" class="indent">เครื่องมือแพทย์ที่ใช้ในงานวิจัย (ชื่อ ยี่ห้อ รุ่น): <span data-f="classification.device_names"></span></td></tr>
+    <tr><td colspan="3" class="indent">แนบเอกสารประกอบเป็นไฟล์แยก: รายละเอียดเครื่องมือแพทย์ (Device Description) เอกสารข้อมูลทางเทคนิค คู่มือการใช้งาน คู่มือผู้วิจัยที่ระบุระดับความเสี่ยง เอกสารผลการวิจัยที่เกี่ยวข้อง หนังสือรับรองผู้ผลิตหรือผู้นำเข้า และใบอนุญาต/หนังสือรับรองจาก อย. (ถ้ามี)</td></tr>
+  </tbody>
+</table>
+
+<h3 class="n">12.2 สรุปการวัดผลการวิจัย (Outcome measurement)</h3>
+<p class="body" data-if="methodology.outcome_measures"><span data-f="methodology.outcome_measures"></span></p>
+<table class="g"><colgroup><col style="width:8%"><col style="width:34%"><col style="width:30%"><col></colgroup>
+  <tr class="hs"><td></td><td class="c">ตัวแปรที่ต้องการวัด (Outcome / Parameter)</td><td class="c">เครื่องมือที่ใช้วัด (Measurement tools)</td><td class="c">ผู้ประเมินหรือผู้วัดผล (Assessor)</td></tr>
+  <tbody data-each="ap02.outcomes" data-min="3"><template>
+    <tr><td class="c" data-i></td><td><span data-f=".parameter"></span></td><td><span data-f=".tool"></span></td><td><span data-f=".assessor"></span></td></tr>
+  </template></tbody>
+</table>
+
+<h3 class="n">12.3 คำจำกัดความ (Operational definition)</h3>
+<p class="hint">ระบุคำจำกัดความที่สำคัญ โดยเฉพาะ outcome ที่จะวัด</p>
+<p class="body para"><span data-f="methodology.operational_definitions" class="blk"></span></p>
+
+<h2 class="n">13. การวิเคราะห์ทางสถิติ</h2>
+<p class="body para"><span data-f="methodology.statistical_analysis" class="blk"></span></p>
+
+<h2 class="n">14. <u>ข้อพิจารณาด้านจริยธรรม</u> ระบุข้อมูลด้านจริยธรรม ได้แก่</h2>
+<table class="g box"><colgroup><col style="width:34%"><col style="width:8%"><col></colgroup>
+  <tr class="hs"><td colspan="3">14.1 กระบวนการขอความยินยอม</td></tr>
+  <tr><td class="lab">ใครเป็นผู้ให้ข้อมูลและขอความยินยอม</td><td colspan="2"><span data-f="ap02.consent.by"></span></td></tr>
+  <tr><td class="lab" rowspan="5">ขอความยินยอมอย่างไร</td><td class="c"><span data-c="methodology.consent_method==written"></span></td><td>ขอความยินยอมโดยการลงลายมือชื่อ (Written Consent)</td></tr>
+  <tr><td class="c"><span data-c="methodology.consent_method==action"></span></td><td>ขอความยินยอมโดยการกระทำ (Consent by Action) เช่น ตอบแบบสอบถาม โดยไม่ระบุชื่อและข้อมูลเชื่อมโยงบุคคล</td></tr>
+  <tr><td class="c"><span data-c="methodology.consent_method==verbal"></span></td><td>ขอความยินยอมด้วยวาจา (Verbal Consent) โดยไม่ต้องลงลายมือชื่อ</td></tr>
+  <tr><td class="c"><span data-c="methodology.consent_method==electronic"></span></td><td>ขอความยินยอมแบบอิเล็คทรอนิกส์ (e-Consent)</td></tr>
+  <tr><td class="c"><span data-c="methodology.consent_method==waiver"></span></td><td>ขอยกเว้นการขอความยินยอม (Waiver of Consent) <span data-if="methodology.consent_method==waiver">เนื่องจาก <span data-f="methodology.consent_process"></span></span></td></tr>
+  <tr><td class="lab">ขอความยินยอมเมื่อไร ที่ใด (ระบุสถานที่)</td><td colspan="2"><span data-f="ap02.consent.when_where"></span></td></tr>
+  <tr><td class="lab">มีเวลาให้ตัดสินใจนานเท่าใด</td><td colspan="2"><span data-f="ap02.consent.decision_time"></span></td></tr>
+
+  <tr class="hs"><td colspan="3">14.2 การศึกษาในกลุ่มอ่อนแอและเปราะบาง (vulnerable subjects)</td></tr>
+  <tr><td class="lab" rowspan="9">ถ้ามีให้ทำเครื่องหมาย / ที่ตรงกับผู้เข้าร่วมวิจัย</td><td class="c"><span data-c="none:vulnerable.cognitive_communication||vulnerable.institutional||vulnerable.deferral||vulnerable.medical||vulnerable.economic||vulnerable.social||vulnerable.other"></span></td><td>ไม่มี กลุ่มอ่อนแอและเปราะบาง</td></tr>
+  <tr><td class="c"><span data-c="vulnerable.cognitive_communication||vulnerable.institutional||vulnerable.deferral||vulnerable.medical||vulnerable.economic||vulnerable.social||vulnerable.other"></span></td><td>มี กลุ่มอ่อนแอและเปราะบาง</td></tr>
+  <tr><td class="c"><span data-c="vulnerable.cognitive_communication"></span></td><td>Cognitive / communication บุคคลผู้ขาดความสามารถในการตัดสินใจ หรือมีปัญหาในการสื่อสาร</td></tr>
+  <tr><td class="c"><span data-c="vulnerable.institutional"></span></td><td>Institutional บุคคลผู้ขาดอิสระในการตัดสินใจ เพราะตกอยู่ภายใต้อำนาจหรือการปกครอง</td></tr>
+  <tr><td class="c"><span data-c="vulnerable.deferral"></span></td><td>Deferral บุคคลผู้ไม่เท่าเทียมในทางสังคม เช่น ผู้ป่วยของแพทย์ผู้วิจัย นักเรียนของอาจารย์</td></tr>
+  <tr><td class="c"><span data-c="vulnerable.medical"></span></td><td>Medical บุคคลผู้เจ็บป่วยร้ายแรง เช่น มะเร็งระยะสุดท้าย</td></tr>
+  <tr><td class="c"><span data-c="vulnerable.economic"></span></td><td>Economic บุคคลผู้ขาดโอกาสในการเข้าถึงการบริการสุขภาพ เช่น คนยากจน</td></tr>
+  <tr><td class="c"><span data-c="vulnerable.social"></span></td><td>Social บุคคลที่ถูกแบ่งแยก กีดกันในสังคม เช่น กลุ่มชาติพันธุ์ คนเร่ร่อน</td></tr>
+  <tr><td class="c"><span data-c="vulnerable.other"></span></td><td>อื่นๆ ระบุ <span data-f="vulnerable.other" data-if="vulnerable.other"></span></td></tr>
+  <tr data-if="vulnerable.cognitive_communication||vulnerable.institutional||vulnerable.deferral||vulnerable.medical||vulnerable.economic||vulnerable.social||vulnerable.other"><td class="lab">การปกป้อง (Additional protection) ผู้เข้าร่วมการวิจัยกลุ่มอ่อนแอและเปราะบาง</td><td colspan="2"><span data-f="vulnerable.additional_protection"></span></td></tr>
+
+  <tr class="hs"><td colspan="3">14.3 ความเสี่ยงและความไม่สะดวกสบายที่อาจเกิดขึ้นจากการเข้าร่วมการวิจัย (Foreseeable Risks and Burdens)</td></tr>
+  <tr><td class="lab">ความเสี่ยงทางกาย</td><td colspan="2"><span data-f="risks.physical_detail"></span></td></tr>
+  <tr><td class="lab">ความเสี่ยงทางจิตใจ</td><td colspan="2"><span data-f="risks.psychological_detail"></span></td></tr>
+  <tr><td class="lab">ความเสี่ยงทางเศรษฐกิจ</td><td colspan="2"><span data-f="risks.economic_detail"></span></td></tr>
+  <tr><td class="lab">ความเสี่ยงทางสังคม</td><td colspan="2"><span data-f="risks.social_detail"></span></td></tr>
+  <tr><td class="lab">ความเสี่ยงอื่น ๆ</td><td colspan="2"><span data-f="risks.other_detail"></span></td></tr>
+  <tr><td class="lab">ความไม่สะดวกสบาย</td><td colspan="2"><span data-f="risks.inconvenience"></span></td></tr>
+  <tr><td class="lab">วิธีการลดความเสี่ยงและความไม่สะดวกสบาย</td><td colspan="2"><span data-f="risks.mitigation"></span></td></tr>
+
+  <tr class="hs"><td colspan="3">14.4 ประโยชน์ที่คาดว่าผู้เข้าร่วมวิจัยจะได้รับ จากการเข้าร่วมงานวิจัย</td></tr>
+  <tr><td class="lab">ประโยชน์โดยตรงต่อผู้เข้าร่วมวิจัย</td><td colspan="2"><span data-f="benefits.direct_detail"></span></td></tr>
+  <tr><td class="lab">ประโยชน์ทางอ้อมต่อผู้เข้าร่วมวิจัย</td><td colspan="2"><span data-f="benefits.indirect_detail"></span></td></tr>
+  <tr><td class="lab">ประโยชน์ต่อผู้อื่นหรือการเพิ่มองค์ความรู้</td><td colspan="2"><span data-f="benefits.to_others_detail"></span></td></tr>
+
+  <tr class="hs"><td colspan="3">14.5 ประโยชน์และการดูแลผู้เข้าร่วมวิจัย ภายหลังเสร็จสิ้นการวิจัย (Post-Trial Benefits and Care)</td></tr>
+  <tr><td class="lab">ประโยชน์ที่จะได้รับหลังสิ้นสุดกระบวนการวิจัย และ/หรือ วิธีการเพิ่มประโยชน์</td><td colspan="2"><span data-f="benefits.post_trial_benefit"></span></td></tr>
+  <tr><td class="lab">การดูแลรักษาหลังสิ้นสุดกระบวนการวิจัย</td><td colspan="2"><span data-f="benefits.post_trial_care"></span></td></tr>
+
+  <tr class="hs"><td colspan="3">14.6 การรักษาความลับของข้อมูล (Confidentiality of Data)</td></tr>
+  <tr><td class="lab" rowspan="2">ชนิดของข้อมูล</td><td class="c"><span data-c="data_management.identifiability==identifiable|deidentified"></span></td><td>ข้อมูลสามารถระบุตัวตนของผู้เข้าร่วมวิจัยได้ ผ่านรหัส (Identifiable Data)</td></tr>
+  <tr><td class="c"><span data-c="data_management.identifiability==anonymized"></span></td><td>ข้อมูลไม่สามารถระบุตัวตนของผู้เข้าร่วมวิจัย (Anonymized Data)</td></tr>
+  <tr><td class="lab" rowspan="4">รูปแบบการเก็บข้อมูล</td><td class="c"><span data-c="ap02.storage.computer"></span></td><td>เก็บข้อมูลเป็นไฟล์ Data set เช่น Excel หรือโปรแกรม ในคอมพิวเตอร์ ระบุ <span data-f="data_management.storage_method"></span></td></tr>
+  <tr><td class="c"><span data-c="ap02.storage.cloud"></span></td><td>เก็บข้อมูลในระบบคลาวด์ เช่น Google Drive ระบุ <span data-f="ap02.storage.cloud" data-if="ap02.storage.cloud"></span></td></tr>
+  <tr><td class="c"><span data-c="ap02.storage.paper"></span></td><td>แบบเก็บข้อมูลเป็นกระดาษ</td></tr>
+  <tr><td class="c"><span data-c="ap02.storage.other"></span></td><td>อื่นๆ ระบุ <span data-f="ap02.storage.other" data-if="ap02.storage.other"></span></td></tr>
+  <tr><td class="lab">วิธีการรักษาความลับของข้อมูล</td><td colspan="2"><span data-f="data_management.confidentiality_method"></span></td></tr>
+  <tr><td class="lab">ระยะเวลาในการเก็บรักษาข้อมูล (ปี)</td><td colspan="2"><span data-f="data_management.retention_years"></span></td></tr>
+  <tr><td class="lab">จะทำลายข้อมูลของผู้เข้าร่วมงานวิจัยเมื่อใด วิธีการทำลายอย่างไร</td><td colspan="2"><span data-f="data_management.destruction_plan"></span></td></tr>
+</table>
+
+<h2 class="n">15. เพิ่มเติมข้อพิจารณาในเรื่องชุมชน (ในกรณีที่ทำการวิจัยในชุมชน)</h2>
+<p class="hint">ถ้าไม่ได้ทำการวิจัยในชุมชน ให้ระบุว่า "ไม่เกี่ยวข้อง" ในแต่ละข้อ</p>
+<p class="body">15.1 การปรึกษาหารือกับผู้นำชุมชน ก่อนเริ่มการวิจัย: <span data-f="ap02.community.consultation"></span></p>
+<p class="body">15.2 ประโยชน์ต่อชุมชน ทั้งในระหว่างดำเนินการวิจัย และภายหลังเสร็จสิ้นการวิจัย: <span data-f="ap02.community.benefit"></span></p>
+<p class="body">15.3 ผลกระทบที่อาจเกิดขึ้นต่อชุมชนที่ทำการวิจัย: <span data-f="ap02.community.impact"></span></p>
+
+<h2 class="n">16. แผนการดำเนินการวิจัย และการบริหารจัดการ: ตารางสรุปการจัดการเวลาและบุคลากรในการวิจัย</h2>
+<!-- built by fill.js: 8 month columns as on the EC form, more when the plan runs longer (up to 12) -->
+<div class="tw"><table class="f gantt" data-gantt="ap02.timeline" data-min="7" data-cols="8"></table></div>
+<p class="hint">ระบุช่วงเวลาการทำงานแต่ละขั้นตอนและบุคลากรที่เกี่ยวข้อง ปรับรายการและช่วงเวลาให้สอดคล้องกับระยะเวลาดำเนินงานจริง (หัวตารางเดือนคำนวณจากวันที่เริ่มต้นในข้อ 4)</p>
+
+<h2 class="n">17. งบประมาณในการวิจัย</h2>
+<table class="g box"><colgroup><col style="width:8%"><col><col style="width:24%"></colgroup>
+  <tr class="hs"><td colspan="2">17.1 ระบุแหล่งทุนวิจัย (Funding)</td><td class="c">จำนวนเงิน (บาท)</td></tr>
+  <tr><td class="c"><span data-c="funding.funding_type==personal"></span></td><td>ทุนส่วนตัว</td><td class="money"><span data-if="funding.funding_type==personal"><span data-f="funding.amount_baht" data-fmt="money"></span></span></td></tr>
+  <tr><td class="c"><span data-c="funding.funding_type==government|university"></span></td><td>ทุนจากหน่วยงานของรัฐบาล ระบุ <span data-if="funding.funding_type==government|university"><span data-f="funding.grant_name_th"></span></span></td><td class="money"><span data-if="funding.funding_type==government|university"><span data-f="funding.amount_baht" data-fmt="money"></span></span></td></tr>
+  <tr><td class="c"><span data-c="funding.funding_type==nonprofit"></span></td><td>ทุนจากองค์กรซึ่งไม่แสวงหาผลกำไร ระบุ <span data-if="funding.funding_type==nonprofit"><span data-f="funding.grant_name_th"></span></span></td><td class="money"><span data-if="funding.funding_type==nonprofit"><span data-f="funding.amount_baht" data-fmt="money"></span></span></td></tr>
+  <tr><td class="c"><span data-c="funding.funding_type==private|foreign|other"></span></td><td>ทุนจากบริษัทเอกชน ระบุ <span data-if="funding.funding_type==private|foreign|other"><span data-f="funding.grant_name_th"></span></span></td><td class="money"><span data-if="funding.funding_type==private|foreign|other"><span data-f="funding.amount_baht" data-fmt="money"></span></span></td></tr>
+</table>
+<table class="g box"><colgroup><col style="width:8%"><col><col style="width:24%"></colgroup>
+  <tr class="hs"><td colspan="2">17.2 รายละเอียดงบประมาณ</td><td class="c">จำนวนเงิน (บาท)</td></tr>
+  <tr><td class="c">1</td><td>ค่าตอบแทนผู้เข้าร่วมการวิจัย</td><td class="money"><span data-f="ap02.budget.compensation" data-fmt="money"></span></td></tr>
+  <tr><td class="c">2</td><td>ค่าดูแลรักษาและฟื้นฟูผู้เข้าร่วมการวิจัย กรณีเกิดเหตุการณ์ไม่พึงประสงค์</td><td class="money"><span data-f="ap02.budget.care" data-fmt="money"></span></td></tr>
+  <tr><td class="c">3</td><td>ค่าใช้จ่ายด้านอุปกรณ์การวิจัย</td><td class="money"><span data-f="ap02.budget.supplies" data-fmt="money"></span></td></tr>
+  <tr><td class="c">4</td><td>ค่าเดินทาง / ค่าที่พัก</td><td class="money"><span data-f="ap02.budget.travel" data-fmt="money"></span></td></tr>
+  <tr><td class="c">5</td><td>ค่าเขียนแบบ ออกแบบ และจัดทำต้นแบบ</td><td class="money"><span data-f="ap02.budget.design" data-fmt="money"></span></td></tr>
+  <tr><td class="c">6</td><td>ค่าครุภัณฑ์</td><td class="money"><span data-f="ap02.budget.equipment" data-fmt="money"></span></td></tr>
+  <tr><td class="c">7</td><td>ค่าวิเคราะห์ข้อมูล</td><td class="money"><span data-f="ap02.budget.analysis" data-fmt="money"></span></td></tr>
+  <tr><td class="c">8</td><td>อื่น ๆ</td><td class="money"><span data-f="ap02.budget.other" data-fmt="money"></span></td></tr>
+  <tr><td></td><td><b>รวม</b></td><td class="money"><span data-f="funding.amount_baht" data-fmt="money"></span></td></tr>
+</table>
+
+<h2 class="n">18. เอกสารอ้างอิง</h2>
+<p class="hint">ระบุตามมาตรฐานการเขียนเอกสารอ้างอิง ใช้รูปแบบ Vancouver หรือ APA เท่านั้น</p>
+<p class="body"><span data-f="ap02.references" data-fmt="list" class="blk"></span></p>
+
+<h2 class="n">19. ภาคผนวก (แยกออกจากเอกสารโครงการวิจัย และแยกเป็นแต่ละเอกสาร)</h2>
+<ol class="aff" style="margin-left:6mm">
+  <li>แบบบันทึกข้อมูล (Case Record Form) (ถ้ามี)</li>
+  <li>แบบสอบถาม (ถ้ามี)</li>
+  <li>เอกสารข้อมูลและขอความยินยอมเข้าร่วมการวิจัย (AP 03_1/2026)<span data-if="classification.has_future_biobank">, AP 03_2/2026</span><span data-if="classification.has_genetics">, AP 03_3/2026</span><span data-if="population.children">, AP 03_4/2026</span><span data-if="classification.uses_cadaver">, AP 03_5/2026</span><span data-if="classification.is_case_report">, AP 03_6/2026</span></li>
+  <li>ประวัติผู้วิจัยและผู้วิจัยร่วม ที่ลงนามและวันที่กำกับ</li>
+  <li>หลักฐานการอบรมด้านจริยธรรมการวิจัยในมนุษย์ และการอบรม ICH GCP ที่ยังไม่หมดอายุจนถึงระยะเวลาที่สิ้นสุดแผนการวิจัย</li>
+  <li>เอกสารเปิดเผยผลประโยชน์ทับซ้อนของผู้วิจัยและผู้วิจัยร่วม (AP 01_2/2026) (รายบุคคล)</li>
+  <li data-if="advisors.0">หนังสือรับรองการเป็นอาจารย์ที่ปรึกษาโครงการวิจัยของนักศึกษา (AP 01_3/2026)</li>
+  <li>โฆษณา แผ่นพับ สมุดไดอารี่ บัตรประจำตัวผู้เข้าร่วมการวิจัย เอกสารคำแนะนำ (ถ้ามี)</li>
+</ol>
+</template>
+
+<script type="module">
+import { boot } from "../src/fill.js";
+boot();
+</script>
+</body>
+</html>

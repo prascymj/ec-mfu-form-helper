@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EC Fee Form</title>
+<link rel="stylesheet" href="_base.css">
+<style>
+@page { margin: 9mm 15mm 12mm 20mm; @top-left { content: none; } }
+.sheet.fee { font-size: 14pt; line-height: 1.2; } /* the official FEE form is set in 14pt, not 16pt */
+/* page 1 is one page by design (no page break inside it), so the tight Word-like spacing is safe */
+.sheet.fee p { line-height: 1.22; }
+.fee h1.title { margin: 0; }
+.fee .sub { text-align: center; font-weight: 700; margin: 0 0 4mm; }
+.fee .row { margin: 0 0 1mm; }
+.fee .grid2 { display: grid; grid-template-columns: 0.46fr 0.54fr; column-gap: 4mm; margin: 1mm 0; }
+.fee .boxhead { border: 1px solid #000; padding: 0 2mm; font-weight: 700; text-decoration: underline; margin: 2mm 0 0.5mm; }
+.fee .opt { padding-left: 7mm; text-indent: -7mm; margin: 0 0 0.3mm; }
+.fee .opt .cb { text-indent: 0; }
+.fee .signs { display: grid; grid-template-columns: 1fr 1fr; column-gap: 8mm; margin-top: 3mm; text-align: center; }
+.fee .signs p { margin: 0; }
+.fee .codes { display: flex; gap: 12mm; margin: 0 0 1mm; }
+.fee .red { color: #e00000; }
+.fee .evidence { border: 1px solid #000; height: 105mm; margin: 2mm 0 6mm; }
+.fee .hl { background: #ffff00; font-weight: 700; }
+.fee ol.notes { padding-left: 7mm; margin: 1mm 0 0; }
+.fee ol.notes li { margin: 0 0 1mm; }
+.fee ul.dash { list-style: none; padding-left: 8mm; margin: 0; }
+.fee ul.dash li::before { content: "-"; display: inline-block; width: 6mm; margin-left: -6mm; }
+.fee .pick { display: grid; grid-template-columns: auto 1fr; column-gap: 2mm; margin: 2mm 0 3mm 7mm; }
+</style>
+</head>
+<body>
+<div class="bar">
+  <div><b>เอกสารแจ้งชำระค่าธรรมเนียม EC</b> <span class="note">ร่างให้ผู้วิจัยตรวจ ไม่ใช่การรับรองจริยธรรม</span><br><span class="stat" id="stat"></span></div>
+  <div><label class="btn">เปิดไฟล์ JSON<input type="file" id="json-file" accept=".json"></label> <button id="print">พิมพ์ / บันทึก PDF</button></div>
+</div>
+
+<div class="sheet fee"></div>
+
+<template id="form-src">
+<div class="fee">
+<h1 class="title">เอกสารแจ้งชำระค่าธรรมเนียม</h1>
+<p class="sub">การยื่นเสนอขอรับการพิจารณาจริยธรรมการวิจัยในมนุษย์ มหาวิทยาลัยแม่ฟ้าหลวง</p>
+
+<p class="row">ชื่อโครงการวิจัย <span data-f="meta.title_th" class="ul"></span></p>
+<p class="row">หัวหน้าโครงการวิจัย <span data-f="principal_investigator.title_th" class="ul"></span> &nbsp;ที่อยู่ <span data-f="principal_investigator.address" class="ul"></span></p>
+<p class="row">จำนวนเงิน <span data-f="_fee.amount_baht" data-fmt="money" class="ul"></span> บาท &nbsp;(-<span data-f="_fee.amount_baht" data-fmt="bahttext"></span>-)</p>
+
+<div class="grid2">
+  <p><span data-c="fee_receipt.in_pi_name"></span> ออกใบเสร็จรับเงินในนามหัวหน้าโครงการ</p>
+  <p><span data-c="fee_receipt.in_project_name"></span> ออกใบเสร็จรับเงินในนามโครงการวิจัย ที่อยู่มหาวิทยาลัยแม่ฟ้าหลวง</p>
+  <p><span data-c="fee_receipt.in_university_name"></span> ออกใบเสร็จรับเงินในนามมหาวิทยาลัยแม่ฟ้าหลวง</p>
+  <p><span data-c="fee_receipt.other"></span> อื่น ๆ ระบุ <span data-f="fee_receipt.other"></span></p>
+</div>
+
+<p class="boxhead">ประเภทการพิจารณาโครงการวิจัยที่เสนอขอรับการพิจารณาครั้งแรก</p>
+<p class="opt"><span data-c="_fee.option==A"></span> โครงการวิจัยที่ได้เสนอขอทุนจากหน่วยงานของรัฐ ภายในประเทศ หรือหน่วยงานเอกชนที่ไม่แสวงหาผลกำไร เก็บค่าธรรมเนียมการพิจารณาโครงการวิจัย จำนวน 3,500 บาทต่อโครงการ</p>
+<p class="opt"><span data-c="_fee.option==B"></span> โครงการวิจัยที่ได้เสนอขอทุนจากหน่วยงานเอกชน ซึ่งแสวงหาผลกำไรทั้งภายในหรือภายนอกประเทศ หรือทุนจากหน่วยงานต่างประเทศ เก็บค่าธรรมเนียมการพิจารณาโครงการวิจัย จำนวน 7,000 บาท ต่อโครงการ</p>
+<p class="opt"><span data-c="_fee.option==C"></span> โครงการวิจัยที่ได้เสนอขอทุนจากมหาวิทยาลัยแม่ฟ้าหลวง หรือโครงการที่ไม่ได้รับทุนจากที่ใด และดำเนินการโดยพนักงานสายวิชาการ เก็บค่าธรรมเนียมการพิจารณาโครงการวิจัย จำนวน 1,500 บาทต่อโครงการ</p>
+<p class="opt"><span data-c="_fee.option==D"></span> โครงการวิจัยที่ได้เสนอขอทุนจากมหาวิทยาลัยแม่ฟ้าหลวง หรือโครงการที่ไม่ได้รับทุนจากที่ใด และดำเนินการโดยนักศึกษาระดับปริญญาโท หรือปริญญาเอก เก็บค่าธรรมเนียมการพิจารณาโครงการวิจัย จำนวน 500 บาทต่อโครงการ</p>
+<p class="opt"><span data-c="_fee.option==E"></span> โครงการวิจัยที่ได้เสนอขอทุนจากมหาวิทยาลัยแม่ฟ้าหลวง หรือโครงการที่ไม่ได้รับทุนจากที่ใด และดำเนินการโดยนักศึกษาปริญญาตรี ได้รับการยกเว้นค่าธรรมเนียม</p>
+
+<p class="boxhead">ประเภทโครงการที่ต้องรับการพิจารณาอย่างต่อเนื่อง เก็บค่าธรรมเนียมการต่ออายุการรับรองรายปี</p>
+<p class="opt"><span class="cb"></span> โครงการวิจัยที่ได้เสนอขอทุนจากหน่วยงานของรัฐ ภายในประเทศ หรือหน่วยงานเอกชนที่ไม่แสวงหาผลกำไร เก็บค่าธรรมเนียมการต่ออายุการรับรอง จำนวน 1,500 บาท ต่อโครงการ</p>
+<p class="opt"><span class="cb"></span> โครงการวิจัยที่ได้เสนอขอทุนจากหน่วยงานเอกชน ซึ่งแสวงหาผลกำไรทั้งภายในหรือภายนอกประเทศ หรือทุนจากหน่วยงานต่างประเทศ เก็บค่าธรรมเนียมการต่ออายุการรับรอง จำนวน 3,500 บาท ต่อโครงการ</p>
+<p class="opt"><span class="cb"></span> โครงการวิจัยที่ได้เสนอขอทุนจากมหาวิทยาลัยแม่ฟ้าหลวง หรือโครงการที่ไม่ได้รับทุนจากที่ใด ได้รับการยกเว้นค่าธรรมเนียมการต่ออายุการรับรอง</p>
+
+<p class="boxhead">ประเภทโครงการที่ต้องรับการพิจารณาอย่างต่อเนื่อง เก็บค่าธรรมเนียมการแก้ไขเพิ่มเติมโครงการวิจัยเป็นรายครั้ง</p>
+<p class="opt"><span class="cb"></span> โครงการวิจัยที่ได้เสนอขอทุนจากหน่วยงานของรัฐ ภายในประเทศ หรือหน่วยงานเอกชนที่ไม่แสวงหาผลกำไร เก็บค่าธรรมเนียมการแก้ไขเพิ่มเติมโครงการวิจัย จำนวน 1,500 บาท ต่อโครงการ</p>
+<p class="opt"><span class="cb"></span> โครงการวิจัยที่ได้เสนอขอทุนจากหน่วยงานเอกชน ซึ่งแสวงหาผลกำไรทั้งภายในหรือภายนอกประเทศ หรือทุนจากหน่วยงานต่างประเทศ เก็บค่าธรรมเนียมการแก้ไขเพิ่มเติมโครงการวิจัย จำนวน 3,500 บาท ต่อโครงการ</p>
+<p class="opt"><span class="cb"></span> โครงการวิจัยที่ได้เสนอขอทุนจากมหาวิทยาลัยแม่ฟ้าหลวง หรือโครงการที่ไม่ได้รับทุนจากที่ใด ได้รับการยกเว้นค่าธรรมเนียมการแก้ไขเพิ่มเติมโครงการวิจัย</p>
+
+<div class="signs keep">
+  <div><p>ลงลายมือชื่อ ..........................................</p><p>( <span data-f="principal_investigator.title_th"></span> )</p><p>หัวหน้าโครงการวิจัย</p><p>วันที่..........................................</p></div>
+  <div><p>ลงลายมือชื่อ ..........................................</p><p>(นางสาวศิรินทร์ทิพย์ อรินต๊ะทราย)</p><p>เจ้าหน้าที่บริหาร</p><p>วันที่..........................................</p></div>
+</div>
+
+<section class="newpage">
+  <p class="codes"><span>รหัสแผนงาน 02201</span><span>รหัสหน่วยงาน 11412000</span><span>รหัสกองทุน 203000</span></p>
+  <p class="red">**โปรดชำระเงินที่ส่วนการเงินและบัญชี มหาวิทยาลัยแม่ฟ้าหลวง และนำสำเนาใบเสร็จมายื่นพร้อมกับโครงการวิจัย**</p>
+  <h1 class="title" style="margin:2mm 0">แนบหลักฐานการชำระเงิน</h1>
+  <div class="pick">
+    <span>โปรดเลือกเพียง 1 ข้อ</span>
+    <div>
+      <p>1) <span data-c="_fee.option==E"></span> นศ. ป.ตรี (<span class="red">ไม่ต้อง</span>แนบภาพใบเสร็จ เนื่องจากได้รับการยกเว้นค่าธรรมเนียม)</p>
+      <p>2) <span data-c="fee_receipt.paid"></span> ใช้งบประมาณฯ จากแหล่งทุนได้แล้ว (โปรดแนบภาพใบเสร็จ)</p>
+      <p>3) <span data-c="fee_receipt.pay_later"></span> ยังใช้งบประมาณฯ จากแหล่งทุน<span class="red">ไม่ได้</span> จะชำระค่าธรรมเนียมได้ตั้งแต่ วันที่ ..... เดือน ................ พ.ศ. .........</p>
+    </div>
+  </div>
+  <p><u>โปรวางไฟล์ภาพหลักฐานการชำระเงิน (เช่นหลักฐานสลิปการโอนเงิน/ใบเสร็จรับเงินที่ออกโดยมหาวิทยาลัยแม่ฟ้าหลวง)</u></p>
+  <div class="evidence"></div>
+  <p><b><u>หมายเหตุ</u></b></p>
+  <ol class="notes">
+    <li>ก่อนส่ง โปรดตรวจสอบว่ากรอกเอกสาร<u>หน้าแรก</u>ให้ครบถ้วน พร้อมทั้ง มีลายเซ็นหัวหน้าโครงการวิจัย</li>
+    <li>ส่ง "เอกสารแจ้งชำระค่าธรรมเนียม" <u>หน้าแรก</u> ที่มีลายเซ็นหัวหน้าโครงการวิจัย และนางสาวศิรินทร์ทิพย์ อรินต๊ะทราย (ติดต่อขอลายเซ็นนางสาวศิรินทร์ทิพย์ ได้ที่ สนง.คณะกรรมการจริยธรรมการวิจัยในมนุษย์ อาคาร AS ชั้น 4 เบอร์โทรศัพท์ 0-5391-7171 E-mail: rec.human@mfu.ac.th)</li>
+    <li><span class="hl"><u>การชำระเงินค่าธรรมเนียมจริยธรรมวิจัย</u></span>
+      <ul class="dash">
+        <li><span class="hl">ชำระโดยการโอนเงินเข้าบัญชี ธนาคารกรุงเทพ เลขที่บัญชี 672-0-10817-1 ชื่อบัญชี มหาวิทยาลัยแม่ฟ้าหลวง และส่งหลักฐานการโอนเงินพร้อมแบบฟอร์ม มายัง E-mail: finrev.finance@mfu.ac.th</span></li>
+        <li><span class="hl">ชำระที่ส่วนการเงินและบัญชี อาคาร AD2 ชั้น 1 เพื่อชำระค่าธรรมเนียม และรับใบเสร็จรับเงิน</span></li>
+      </ul>
+    </li>
+    <li><b>สำหรับนักศึกษาที่ไม่ได้เรียนในจังหวัดเชียงราย ให้ติดต่อเจ้าหน้าที่ประจำสำนักวิชาของตนเอง</b></li>
+    <li><b>สำหรับผู้วิจัยที่ไม่ได้เป็นบุคลากรภายในมหาวิทยาลัยแม่ฟ้าหลวง ให้ติดต่อสอบถามเพิ่มเติมที่เบอร์โทรศัพท์ 0-5391-7171</b></li>
+  </ol>
+</section>
+</div>
+</template>
+
+<script type="module">
+import { boot } from "../src/fill.js";
+boot();
+</script>
+</body>
+</html>

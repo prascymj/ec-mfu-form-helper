@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EC-MFU Form Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="src/app.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <img class="logo" src="assets/ADTlogo.png" alt="สำนักวิชาเทคโนโลยีดิจิทัลประยุกต์ มฟล." onerror="this.style.display='none'">
+    <div>
+      <h1>เตรียมเอกสารยื่น EC มฟล.</h1>
+      <div class="org">สำนักวิชาเทคโนโลยีดิจิทัลประยุกต์ มหาวิทยาลัยแม่ฟ้าหลวง</div>
+      <div class="sub">ไฟล์ข้อเสนอถูกอ่านในเบราว์เซอร์นี้เท่านั้น ไม่ถูกส่งออกไปที่ใด; เอกสารที่ได้เป็นร่างให้ผู้วิจัยตรวจ ไม่ใช่การรับรองจริยธรรม</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+    <span class="saved" id="saved" role="status" aria-live="polite"></span>
+    <button class="btn" id="save" type="button">บันทึกงาน (.json)</button>
+    <label class="btn">เปิดงาน<input type="file" id="open" accept=".json"></label>
+    <button class="btn quiet" id="clear" type="button">ล้างข้อมูล</button>
+  </div>
+</header>
+
+<main>
+  <div class="card">
+    <div class="drop" id="drop" tabindex="0" role="button" aria-label="เลือกไฟล์ข้อเสนอโครงการ">
+      <b>ลากไฟล์ข้อเสนอโครงการมาวาง หรือคลิกเพื่อเลือก</b>
+      <span class="muted">รองรับ .docx (แนะนำ), .pdf ที่มีข้อความ, .md, .txt</span>
+    </div>
+    <input type="file" id="file" accept=".docx,.pdf,.md,.markdown,.txt" class="hidden">
+    <div class="err hidden" id="err" role="alert"></div>
+    <div id="intro">
+      <p class="muted" style="margin:12px 0 0">ขั้นตอน: 1) อัปโหลดข้อเสนอ 2) ตรวจและเติมข้อมูลที่ยังว่าง 3) เปิดแต่ละแบบฟอร์มแล้วสั่งพิมพ์เป็น PDF ตามคู่มือ Package การยื่นเสนอเอกสาร 4.0 (2026)</p>
+    </div>
+  </div>
+
+  <div class="card hidden" id="summary"></div>
+  <div class="hidden" id="review"></div>
+</main>
+
+<script type="module" src="src/app.js"></script>
+</body>
+</html>

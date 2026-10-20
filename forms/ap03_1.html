@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AP 03_1 Information and Consent</title>
+<link rel="stylesheet" href="_base.css">
+<style>
+@page { @top-right { content: "AP 03_1/2026"; font-family: "EC Sarabun", "TH Sarabun New", sans-serif; font-size: 12pt; color: #444; } }
+.idbox { border: 1px solid #000; padding: 1mm 2mm; margin: 2mm 0 3mm; }
+.idbox p { margin: 0; }
+.vol { border: 1px solid #000; padding: 1mm 2mm; margin: 2mm 0; }
+.vol ul { margin: 0; padding-left: 8mm; list-style: square; }
+table.f th.c { text-align: center; }
+.consent h1.title { margin: 0 0 3mm; }
+.consent p.body { text-indent: 10mm; margin: 0 0 1mm; }
+.signr { margin: 3mm 0 0 38%; }
+.signr p { display: grid; grid-template-columns: 1fr 1fr; column-gap: 2mm; margin: 0 0 1mm; }
+.signr p span:first-child { text-align: right; }
+.signr .line { border-bottom: 1px solid #000; }
+.casebox { border: 1px solid #000; margin: 6mm 0 0; break-inside: avoid; }
+.casebox > div { padding: 1mm 2mm; }
+.casebox > div + div { border-top: 1px solid #000; }
+.casebox .hd { font-weight: 700; text-align: center; }
+.cut { color: #1f4e9c; text-align: center; font-weight: 700; margin-top: 6mm; }
+@media print { .cut { display: none; } }
+</style>
+</head>
+<body>
+<div class="bar">
+  <div><b>AP 03_1/2026 เอกสารข้อมูลและขอความยินยอมเข้าร่วมการวิจัย</b> <span class="note">ร่างให้ผู้วิจัยตรวจ ไม่ใช่การรับรองจริยธรรม; ข้อความสีน้ำเงินคือคำแนะนำของ EC จะไม่พิมพ์ออก</span><br><span class="stat" id="stat"></span></div>
+  <div><label class="btn">เปิดไฟล์ JSON<input type="file" id="json-file" accept=".json"></label> <button id="print">พิมพ์ / บันทึก PDF</button></div>
+</div>
+
+<div class="sheet"></div>
+
+<template id="form-src">
+<div class="run-head"><span>Version............ Date.........................</span><span>AP 03_1/2026</span></div>
+<h1 class="title">เอกสารข้อมูลและขอความยินยอมเข้าร่วมการวิจัย</h1>
+<div class="idbox">
+  <p>ชื่อโครงการวิจัย : <span data-f="meta.title_th"></span></p>
+  <p>ผู้วิจัยหลัก : <span data-f="principal_investigator.title_th"></span></p>
+  <p>สังกัด : <span data-f="principal_investigator.affiliation"></span></p>
+  <p>แหล่งทุนวิจัย/ผู้สนับสนุนการวิจัย : <span data-f="funding.grant_name_th"></span></p>
+</div>
+
+<h2 class="sec">1. บทนำส่วนต้น สรุปสาระหลักของโครงการวิจัย</h2>
+<p class="hint">นำเสนอสาระสำคัญอย่างกระชับ ไม่เกิน 1 หน้า A4 ครอบคลุม (1) เป็นโครงการวิจัยและเข้าร่วมโดยสมัครใจ (2) วัตถุประสงค์ ระยะเวลา ขั้นตอนและการปฏิบัติตัว (3) ความเสี่ยงที่พบบ่อยและสำคัญ (4) ประโยชน์ที่คาดว่าจะได้รับ (5) ทางเลือกอื่นกรณีไม่เข้าร่วม; หากขอความยินยอมผ่านแบบสอบถามออนไลน์ ระบุเพียงสาระหลักข้อ (1) ถึง (5)</p>
+<p class="para"><span data-f="layman.plain_summary" class="blk"></span></p>
+
+<h2 class="sec">2. ข้อมูลระบุว่าเป็นการวิจัยและความเป็นอิสระในการตัดสินใจเข้าร่วมการวิจัย</h2>
+<p class="para">ท่านได้รับเชิญให้เข้าร่วมการวิจัย โปรดใช้เวลาในการอ่านเอกสารฉบับนี้ ซึ่งจะช่วยให้ท่านรับทราบสิ่งต่าง ๆ ที่ท่านจะมีส่วนร่วมในการวิจัยนี้ การตัดสินใจเข้าร่วมการวิจัยนี้ขึ้นอยู่กับความสมัครใจของท่าน หากท่านไม่สมัครใจเข้าร่วมการวิจัย จะไม่มีผลใด ๆ ต่อการดูแลรักษาหรือสิทธิที่ท่านพึงมี</p>
+<div class="vol keep">
+  <p>การเข้าร่วมการวิจัยนี้ขึ้นอยู่กับความสมัครใจ</p>
+  <ul>
+    <li>ท่านสามารถตัดสินใจได้อย่างอิสระว่าจะเข้าร่วมหรือไม่เข้าร่วมการวิจัยนี้</li>
+    <li>ท่านสามารถปรึกษาครอบครัวหรือแพทย์ผู้รักษาก่อนตัดสินใจ และสามารถซักถามข้อสงสัยเกี่ยวกับโครงการวิจัยได้ ซึ่งผู้วิจัยจะอธิบายเพิ่มเติมแก่ท่านและตอบข้อซักถามจนท่านเข้าใจ</li>
+    <li>หากท่านสมัครใจเข้าร่วมการวิจัยนี้แล้ว ท่านยังคงสามารถถอนตัวออกจากการวิจัยได้ทุกเมื่อ</li>
+  </ul>
+</div>
+
+<h2 class="sec">3. เหตุผลและความสำคัญของการวิจัย</h2>
+<p class="hint">สรุปโดยสังเขปประมาณ 1 ย่อหน้า ละเว้นภาษาต่างประเทศหรือศัพท์เทคนิค</p>
+<p class="para"><span data-f="layman.plain_rationale" class="blk"></span></p>
+
+<h2 class="sec">4. คุณสมบัติของผู้ที่สามารถเข้าร่วมการวิจัย และจำนวนผู้เข้าร่วมการวิจัย</h2>
+<p class="hint">บรรยายคุณสมบัติด้วยภาษาง่าย ไม่ควรลอกข้อความเกณฑ์คัดเข้ามาจากโครงการวิจัย</p>
+<p class="para">การวิจัยนี้จะคัดเลือก <span data-f="layman.eligibility"></span> เข้าร่วมการวิจัยจำนวน <span data-f="methodology.sample_size"></span> คน</p>
+
+<h2 class="sec">5. วัตถุประสงค์ของการวิจัย</h2>
+<p class="para">โครงการวิจัยนี้มีวัตถุประสงค์เพื่อ <span data-f="layman.plain_objectives" data-strip="เพื่อ"></span></p>
+
+<h2 class="sec">6. รูปแบบการวิจัย</h2>
+<p class="hint">แสดงรูปแบบการวิจัย อาจใช้แผนภาพหรือตาราง; ถ้ามีการสุ่ม การปิดบังสองทาง ยาหลอก หรือการผ่าตัดปลอม ให้อธิบายด้วยภาษาง่ายตามตัวอย่างของ EC</p>
+<p class="para"><span data-f="layman.plain_design" class="blk"></span></p>
+
+<h2 class="sec">7. ขั้นตอนการวิจัยและระยะเวลาที่เข้าร่วมการวิจัย</h2>
+<p class="hint">การปฏิบัติตัวระหว่างการวิจัย ระยะเวลาที่เข้าร่วม จำนวนครั้งที่นัด และแยกให้ชัดว่าส่วนใดเป็นการวิจัย ส่วนใดเป็นการดูแลตามมาตรฐานปกติ</p>
+<p class="para"><span data-f="layman.participant_tasks" class="blk"></span></p>
+
+<h2 class="sec">8. ความเสี่ยงและความไม่สะดวกสบายจากการเข้าร่วมการวิจัย</h2>
+<p class="hint">เช่น การเสียเวลา ความไม่สบายใจในการตอบแบบสอบถาม ความเสี่ยงต่อร่างกาย และความเสี่ยงที่ยังไม่ทราบแน่นอน</p>
+<p class="para"><span data-f="layman.foreseeable_risks" class="blk"></span></p>
+
+<h2 class="sec">9. ประโยชน์ที่คาดว่าจะเกิดขึ้นในระหว่างการเข้าร่วมการวิจัย</h2>
+<p class="hint">ระบุประโยชน์โดยตรงต่อผู้เข้าร่วมก่อน แล้วจึงประโยชน์ต่อผู้อื่นหรือสังคม; ถ้าไม่มีประโยชน์โดยตรง ให้ระบุว่า "ท่านไม่ได้รับประโยชน์โดยตรงจากการเข้าร่วมในโครงการวิจัยนี้ แต่ผลการศึกษาที่ได้อาจมีประโยชน์ต่อ..."</p>
+<p class="para"><span data-f="layman.direct_benefits" class="blk"></span></p>
+<p class="para" data-if="layman.indirect_benefits"><span data-f="layman.indirect_benefits"></span></p>
+
+<h2 class="sec">10. ทางเลือกอื่น หากไม่สมัครใจเข้าร่วมการวิจัย</h2>
+<p class="para"><span data-f="layman.alternatives" class="blk"></span></p>
+
+<h2 class="sec">11. แนวทางการจัดการเมื่อมีสถานการณ์ที่อาจเกิดขึ้นระหว่างการวิจัย</h2>
+<div class="tw"><table class="f">
+  <colgroup><col style="width:40%"><col></colgroup>
+  <tr class="hs"><td class="c"><b>สถานการณ์</b></td><td class="c"><b>แนวทางการปฏิบัติ</b></td></tr>
+  <tr><td>หากท่านถอนตัวระหว่างการวิจัย</td><td><span data-f="layman.withdrawal_handling" class="blk"></span></td></tr>
+  <tr><td>หากมีข้อมูลใหม่ที่เกี่ยวข้องกับการวิจัยหรือความปลอดภัยของท่าน</td><td>ผู้วิจัยจะแจ้งให้ท่านทราบโดยเร็ว และท่านสามารถตัดสินใจได้ว่า ท่านจะร่วมอยู่ในการวิจัยนี้ต่อหรือไม่</td></tr>
+  <tbody data-each="methodology.early_termination_criteria"><template>
+    <tr><td><span data-f=".__self"></span></td><td><span data-f="ap03_1.termination_handling"></span></td></tr>
+  </template></tbody>
+</table></div>
+
+<h2 class="sec">12. ประโยชน์หรือสิ่งที่ผู้เข้าร่วมการวิจัยอาจได้รับ หลังเสร็จสิ้นการวิจัย</h2>
+<p class="hint">เช่น สิ่งที่ผู้เข้าร่วมได้รับหลังเสร็จสิ้นการวิจัย และจะแจ้งผลลัพธ์ให้ทราบหรือไม่</p>
+<p class="para">หลังจากเสร็จสิ้นการวิจัย <span data-f="layman.post_trial"></span></p>
+
+<h2 class="sec">13. การรักษาความลับของข้อมูลและข้อจำกัดในการรักษาความลับของข้อมูล</h2>
+<p class="hint">เช่น บันทึกด้วยรหัสแทนชื่อ เก็บในคอมพิวเตอร์ที่มีรหัสป้องกัน นำเสนอผลโดยไม่เชื่อมโยงถึงตัวบุคคล วิธีปกปิดตัวตนถ้ามีการถ่ายรูป ระยะเวลาเก็บรักษาและทำลายข้อมูล</p>
+<p class="para"><span data-f="layman.confidentiality"></span> อย่างไรก็ตาม อาจมีบุคคลบางกลุ่มที่ขอเข้าดูข้อมูลส่วนบุคคลของท่านได้ ได้แก่ คณะกรรมการจริยธรรมการวิจัยในคน ผู้ประสานงานวิจัย ผู้กำกับดูแลการวิจัย และเจ้าหน้าที่จากสถาบันหรือองค์กรของรัฐที่มีหน้าที่ตรวจสอบ เพื่อตรวจสอบความถูกต้องของข้อมูลและขั้นตอนการวิจัย</p>
+
+<h2 class="sec">14. การจัดการข้อมูลและตัวอย่างชีวภาพของผู้เข้าร่วมการวิจัยหลังเสร็จสิ้นการวิจัย (ถ้ามี)</h2>
+<p class="hint">ถ้าไม่มี ให้ระบุว่าไม่มีการเก็บ</p>
+<p class="para"><span data-f="data_management.destruction_plan" class="blk"></span></p>
+<p class="para" data-if="data_management.retention_years">ข้อมูลจะถูกเก็บรักษาไว้เป็นเวลา <span data-f="data_management.retention_years"></span> ปี หลังเสร็จสิ้นการวิจัย</p>
+
+<h2 class="sec">15. ค่าตอบแทนการเข้าร่วมในการวิจัย</h2>
+<p class="hint">ระบุเป็นจำนวนเงินครั้งละ ... บาท รวมทั้งหมด ... ครั้ง ไม่คูณรวมและไม่กล่าวว่าจะได้รับเมื่อโครงการเสร็จสิ้น</p>
+<p class="para"><span data-f="layman.compensation" class="blk"></span></p>
+
+<h2 class="sec">16. ค่าใช้จ่ายที่ผู้เข้าร่วมการวิจัยต้องรับผิดชอบ</h2>
+<p class="para"><span data-f="layman.participant_costs" class="blk"></span></p>
+
+<h2 class="sec">17. แนวทางการดูแลรักษาและจ่ายค่าชดเชย กรณีที่ผู้เข้าร่วมการวิจัยได้รับอันตรายหรือผลกระทบจากการเข้าร่วมการวิจัย</h2>
+<p class="para"><span data-f="layman.injury_care" class="blk"></span></p>
+
+<h2 class="sec">18. บุคคลที่สามารถติดต่อได้ กรณีที่มีปัญหาหรือข้อสงสัย</h2>
+<p class="para">หากท่านมีข้อสงสัยเกี่ยวกับการวิจัยหรือความปลอดภัยระหว่างเข้าร่วมการวิจัย ท่านสามารถสอบถามผู้วิจัยได้โดยตรง ได้แก่ <span data-f="principal_investigator.title_th"></span> โทรศัพท์ <span data-f="principal_investigator.phone" class="nobreak"></span> อีเมล <span data-f="principal_investigator.email" data-fmt="email" class="nobreak"></span><span data-if="advisors.0"> อาจารย์ที่ปรึกษา <span data-f="advisors.0.title_th"></span> โทรศัพท์ <span data-f="advisors.0.phone" class="nobreak"></span></span></p>
+<p class="para">หากท่านมีข้อสงสัยเกี่ยวกับสิทธิของท่าน ท่านสามารถติดต่อสอบถามได้ที่ คณะกรรมการจริยธรรมการวิจัยในมนุษย์ มหาวิทยาลัยแม่ฟ้าหลวง อาคารบริการวิชาการ (AS) ชั้น 4 มหาวิทยาลัยแม่ฟ้าหลวง โทรศัพท์ 053-917-170 ถึง 71 หรือ 053-916-551 หรืออีเมล rec.human@mfu.ac.th เพื่อให้มั่นใจว่า สิทธิ ความปลอดภัย และความเป็นอยู่ที่ดีของท่าน ได้รับความคุ้มครองตามมาตรฐานจริยธรรมการวิจัยในคนระดับสากล</p>
+<div class="hint">
+  <p>หมายเหตุจาก EC (ไม่พิมพ์ออก): เด็กอายุ 7-12 ปี ต้องเพิ่มเอกสารขอความยินยอมจากผู้เข้าร่วมการวิจัยเด็ก (AP 03_4); เก็บตัวอย่างเพื่องานวิจัยในอนาคต ต้องเพิ่ม AP 03_2; การวิจัยด้านพันธุกรรม ต้องเพิ่ม AP 03_3; ลบข้อความแนะนำสีน้ำเงินก่อนส่ง (เครื่องมือนี้ไม่พิมพ์ข้อความสีน้ำเงินให้อยู่แล้ว)</p>
+</div>
+
+<!-- หนังสือแสดงความยินยอม -->
+<section class="newpage consent">
+  <h1 class="title">หนังสือแสดงความยินยอมเข้าร่วมการวิจัย</h1>
+  <p class="body">ข้าพเจ้า ___________________________________ ตัดสินใจเข้าร่วมการวิจัยเรื่อง <span data-f="meta.title_th"></span> ซึ่งข้าพเจ้าได้รับข้อมูลและคำอธิบายเกี่ยวกับการวิจัยนี้แล้ว และได้มีโอกาสซักถามและได้รับคำตอบเป็นที่พอใจแล้ว ข้าพเจ้ามีเวลาเพียงพอในการอ่านและทำความเข้าใจข้อมูลในเอกสารให้ข้อมูลสำหรับผู้เข้าร่วมการวิจัยอย่างถี่ถ้วน และได้รับเวลาเพียงพอในการตัดสินใจว่าจะเข้าร่วมการวิจัยนี้</p>
+  <p class="body">ข้าพเจ้ารับทราบว่าข้าพเจ้าสามารถปฏิเสธการเข้าร่วมการวิจัยนี้ได้โดยอิสระ และระหว่างการเข้าร่วมการวิจัย ข้าพเจ้ายังสามารถถอนตัวออกจากการวิจัยได้ทุกเมื่อ โดยไม่ส่งผลกระทบต่อการดูแลรักษา หรือสิทธิที่ข้าพเจ้าพึงมี</p>
+  <p class="body">โดยการลงนามนี้ ข้าพเจ้าไม่ได้สละสิทธิใด ๆ ที่ข้าพเจ้าพึงมีตามกฎหมาย และหลังจากลงนามแล้ว ข้าพเจ้าจะได้รับเอกสารข้อมูลและขอความยินยอมไว้จำนวน 1 ชุด</p>
+  <div class="signr keep">
+    <p><span>ลายมือชื่อผู้เข้าร่วมการวิจัย</span><span class="line"></span></p>
+    <p><span></span><span>(____________________________)</span></p>
+    <p><span>วัน-เดือน-ปี</span><span class="line"></span></p>
+  </div>
+  <div class="signr keep" style="margin-top:8mm">
+    <p><span>ลายมือชื่อผู้ขอความยินยอม</span><span class="line"></span></p>
+    <p><span></span><span>(____________________________)</span></p>
+    <p><span>วัน-เดือน-ปี</span><span class="line"></span></p>
+  </div>
+
+  <p class="cut">ส่วน "ผู้เข้าร่วมการวิจัยที่อ่านหนังสือไม่ออก" จะพิมพ์เมื่อ ap03_1.illiterate = true; ส่วน "เด็กหรือผู้มีปัญหาทางจิต/สติปัญญา" จะพิมพ์เมื่อเลือกกลุ่มประชากร 4.5 หรือ 4.13</p>
+  <div class="casebox" data-if="ap03_1.illiterate">
+    <div class="hd">กรณี ผู้เข้าร่วมการวิจัยที่อ่านหนังสือไม่ออก แต่ฟังเข้าใจ</div>
+    <div><p class="body">ข้าพเจ้าไม่สามารถอ่านหนังสือได้ แต่ผู้วิจัยได้อ่านข้อความในเอกสารข้อมูลและขอความยินยอมนี้ ให้แก่ข้าพเจ้าฟังจนเข้าใจดีแล้ว ข้าพเจ้าจึงลงนามหรือพิมพ์ลายนิ้วมือของข้าพเจ้าในหนังสือนี้ ด้วยความเต็มใจ</p>
+      <div class="signr"><p><span>ลงนาม/พิมพ์ลายนิ้วมือผู้เข้าร่วมการวิจัย</span><span class="line" style="height:12mm;border:1px dashed #000"></span></p><p><span></span><span>(____________________________)</span></p><p><span>วัน-เดือน-ปี</span><span class="line"></span></p></div></div>
+    <div class="hd">คำรับรองของพยานผู้ไม่มีส่วนได้เสียกับการวิจัย (กรณีที่ผู้เข้าร่วมการวิจัยอ่านหนังสือไม่ออกแต่ฟังเข้าใจ)</div>
+    <div><p class="body">ข้าพเจ้าได้อยู่ร่วมในกระบวนการขอความยินยอมและยืนยันว่า ผู้ขอความยินยอมได้อ่าน หรืออธิบายเอกสารข้อมูลให้แก่ .......................................... ซึ่งผู้มีชื่อข้างต้นมีโอกาสซักถามข้อสงสัยต่าง ๆ และได้ให้ความยินยอมเข้าร่วมการวิจัยโดยอิสระ หลังจากรับทราบข้อมูลที่มีอยู่ตรงตามที่ปรากฏในเอกสารนี้แล้ว</p>
+      <div class="signr"><p><span>ลายมือชื่อพยาน</span><span class="line"></span></p><p><span></span><span>(____________________________)</span></p><p><span>วัน-เดือน-ปี</span><span class="line"></span></p></div></div>
+  </div>
+  <div class="casebox" data-if="population.children||population.cognitive_impaired">
+    <div class="hd">กรณี ผู้เข้าร่วมการวิจัยที่เป็นเด็ก อายุน้อยกว่า 18 ปี หรือเป็นบุคคลที่มีปัญหาทางจิตหรือสติปัญญา ต้องได้รับการปกป้องคุ้มครองเป็นพิเศษ</div>
+    <div><p class="body">ข้าพเจ้าในฐานะ ____________ กับผู้เข้าร่วมการวิจัย ได้อ่านข้อความข้างต้นและมีความเข้าใจดีทุกประการแล้ว ยินยอมให้ ด.ช./ด.ญ./นาย/นาง/นางสาว _____________________ เข้าร่วมการวิจัยด้วยความสมัครใจ จึงได้ลงนามในเอกสารใบยินยอมนี้</p>
+      <div class="signr"><p><span>ลายมือชื่อผู้แทนโดยชอบธรรม/ผู้ปกครอง</span><span class="line"></span></p><p><span></span><span>(____________________________)</span></p><p><span>วัน-เดือน-ปี</span><span class="line"></span></p></div></div>
+  </div>
+</section>
+</template>
+
+<script type="module">
+import { boot } from "../src/fill.js";
+boot();
+</script>
+</body>
+</html>

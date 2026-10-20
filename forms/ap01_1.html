@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AP 01_1 Submission</title>
+<link rel="stylesheet" href="_base.css">
+<style>
+@page { @top-right { content: "AP 01_1/2026"; font-family: "EC Sarabun", "TH Sarabun New", sans-serif; font-size: 12pt; color: #444; } }
+col.k { width: 26%; }
+col.yn1, col.yn2 { width: 13%; }
+col.no { width: 8.5%; } col.nm { width: 28.5%; } col.af { width: 21%; } col.ph { width: 16%; } col.em { width: 26%; }
+</style>
+</head>
+<body>
+<div class="bar">
+  <div><b>AP 01_1/2026 แบบรายงานการส่งโครงการวิจัยเพื่อพิจารณา</b> <span class="note">ร่างให้ผู้วิจัยตรวจ ไม่ใช่การรับรองจริยธรรม</span><br><span class="stat" id="stat"></span></div>
+  <div><label class="btn">เปิดไฟล์ JSON<input type="file" id="json-file" accept=".json"></label> <button id="print">พิมพ์ / บันทึก PDF</button></div>
+</div>
+
+<div class="sheet"></div>
+
+<template id="form-src">
+<div class="run-head"><span>Version............ Date.........................</span><span>AP 01_1/2026</span></div>
+<h1 class="title">แบบรายงานการส่งโครงการวิจัยเพื่อพิจารณา</h1>
+<p class="subtitle">Submission Form for Ethical Review</p>
+
+<div class="tw"><table class="f">
+  <tr><td class="hs">ชื่อโครงการวิจัย (ภาษาไทย และ ภาษาอังกฤษ)</td></tr>
+  <tr><td>(ชื่อภาษาไทย) <span data-f="meta.title_th"></span></td></tr>
+  <tr><td>(ชื่อภาษาอังกฤษ) <span data-f="meta.title_en"></span></td></tr>
+</table></div>
+<p class="note-line"><b class="blue">คำชี้แจง:</b> <span class="blue">ให้กรอกข้อมูล และทำเครื่องหมาย / ในช่อง [&nbsp;&nbsp;&nbsp;] ที่คุณสมบัติสอดคล้องกับโครงการวิจัย เช่น [ / ]</span></p>
+
+<!-- 1. คณะผู้วิจัย -->
+<div class="tw stack">
+<table class="f">
+  <colgroup><col class="k"><col></colgroup>
+  <tr><td colspan="2" class="h">1. คณะผู้วิจัย <span class="ital blue" style="font-weight:400">(เอกสารรับรองโครงการวิจัย (Certificate) ระบุชื่อผู้วิจัยหลักและผู้วิจัยร่วมเท่านั้น)</span></td></tr>
+  <tr><td colspan="2" class="h">1.1 ผู้วิจัยหลัก หรือ หัวหน้าโครงการวิจัย (Principal Investigator)</td></tr>
+  <tr><td class="lab">ตำแหน่งวิชาการ-ยศ-ชื่อ-สกุล</td>
+      <td class="lines"><p>(ไทย) <span data-f="principal_investigator.title_th"></span></p><p>(English) <span data-f="principal_investigator.name_en"></span></p></td></tr>
+  <tr><td class="lab">สถานะ</td>
+      <td class="lines">
+        <p><span data-c="principal_investigator.status==bachelor"></span> นักศึกษา ปริญญาตรี &nbsp;&nbsp; <u>ระบุชั้นปี</u> <span data-f="principal_investigator.student_year" data-if="principal_investigator.status==bachelor"></span></p>
+        <p><span data-c="principal_investigator.status==master"></span> นักศึกษา ปริญญาโท &nbsp;&nbsp; <span data-c="principal_investigator.status==doctoral"></span> นักศึกษา ปริญญาเอก</p>
+        <p><span data-c="principal_investigator.status==lecturer"></span> อาจารย์</p>
+        <p><span data-c="principal_investigator.status==other"></span> อื่นๆ ระบุ ...............................</p>
+      </td></tr>
+  <tr><td class="lab"></td>
+      <td class="lines"><p>ถ้าเป็น<u><b>นักศึกษา</b></u> งานวิจัยนี้เป็นงานเพื่อสำเร็จการศึกษา</p>
+        <p><span data-yn="principal_investigator.is_thesis_work" data-v="1" data-under="principal_investigator.status==bachelor|master|doctoral"></span> ใช่ &nbsp;&nbsp;&nbsp; <span data-yn="principal_investigator.is_thesis_work" data-v="0" data-under="principal_investigator.status==bachelor|master|doctoral"></span> ไม่ใช่</p></td></tr>
+  <tr><td class="lab">สาขาวิชาและหน่วยงาน</td><td><span data-f="principal_investigator.affiliation"></span></td></tr>
+  <tr><td class="lab">ที่อยู่ (ที่ทำงาน)</td><td><span data-f="principal_investigator.address"></span></td></tr>
+  <tr><td class="lab">เบอร์โทรศัพท์</td><td><span data-f="principal_investigator.phone" class="nobreak"></span></td></tr>
+  <tr><td class="lab">E-mail</td><td><span data-f="principal_investigator.email" data-fmt="email" class="nobreak"></span></td></tr>
+</table>
+<table class="f">
+  <colgroup><col class="no"><col class="nm"><col class="af"><col class="ph"><col class="em"></colgroup>
+  <tr><td colspan="5" class="hs">1.2 ผู้วิจัยร่วม (Co-Investigators) <span class="blue">(นักศึกษา ให้ระบุชั้นปี)</span></td></tr>
+  <tr class="hs"><td class="c">ลำดับ</td><td class="c">ตำแหน่งวิชาการ-ยศ-ชื่อ-สกุล <span class="blue">(ภาษาไทย และ ภาษาอังกฤษ)</span></td><td class="c">สาขาวิชาและหน่วยงาน</td><td class="c">เบอร์โทรศัพท์</td><td class="c">E-mail</td></tr>
+  <tbody data-each="co_investigators" data-min="3"><template>
+    <tr><td class="c" data-i></td><td><span data-f=".title_th"></span><br><span data-f=".name_en"></span></td><td><span data-f=".affiliation"></span></td><td><span data-f=".phone" class="nobreak"></span></td><td><span data-f=".email" data-fmt="email" class="nobreak"></span></td></tr>
+  </template></tbody>
+</table>
+<table class="f">
+  <colgroup><col class="no"><col class="nm"><col class="af"><col class="ph"><col class="em"></colgroup>
+  <tr><td colspan="5" class="hs">1.3 อาจารย์ที่ปรึกษาโครงการวิจัย (Research Advisor)</td></tr>
+  <tr class="hs"><td class="c">ลำดับ</td><td class="c">ตำแหน่งวิชาการ-ยศ-ชื่อ-สกุล <span class="blue">(ภาษาไทย และ ภาษาอังกฤษ)</span></td><td class="c">สาขาวิชาและหน่วยงาน</td><td class="c">เบอร์โทรศัพท์</td><td class="c">E-mail</td></tr>
+  <tbody data-each="advisors" data-min="2"><template>
+    <tr><td class="c" data-i></td><td><span data-f=".title_th"></span><br><span data-f=".name_en"></span></td><td><span data-f=".affiliation"></span></td><td><span data-f=".phone" class="nobreak"></span></td><td><span data-f=".email" data-fmt="email" class="nobreak"></span></td></tr>
+  </template></tbody>
+</table>
+<table class="f">
+  <colgroup><col class="k"><col></colgroup>
+  <tr><td colspan="2" class="hs">1.4 ผู้ประสานงานโครงการวิจัย (Research Coordinator)</td></tr>
+  <tr><td class="lab">ตำแหน่งวิชาการ-ยศ-ชื่อ-สกุล<br>(ภาษาไทย และ ภาษาอังกฤษ)</td>
+      <td class="lines"><p>(ไทย) <span data-f="coordinator.title_th"></span></p><p>(อังกฤษ) <span data-f="coordinator.name_en"></span></p></td></tr>
+  <tr><td class="lab">เบอร์โทรศัพท์</td><td><span data-f="coordinator.phone" class="nobreak"></span></td></tr>
+  <tr><td class="lab">E-mail</td><td><span data-f="coordinator.email" data-fmt="email" class="nobreak"></span></td></tr>
+</table>
+</div>
+
+<!-- 2. แหล่งทุน -->
+<div class="tw stack">
+<table class="f">
+  <colgroup><col style="width:30%"><col></colgroup>
+  <tr><td colspan="2" class="h">2. แหล่งทุน</td></tr>
+  <tr>
+    <td class="lines">
+      <p><b>2.1 ชนิดของทุน</b> (ระบุรายละเอียดข้างล่าง)</p>
+      <p><span data-c="funding.funding_type==university"></span> ทุน มหาวิทยาลัย / สำนักวิชา</p>
+      <p><span data-c="funding.funding_type==government"></span> ทุน รัฐบาล</p>
+      <p><span data-c="funding.funding_type==private"></span> ทุน เอกชน / บริษัทยา</p>
+      <p><span data-c="funding.funding_type==other|nonprofit|foreign"></span> ทุน อื่นๆ</p>
+      <p><span data-c="funding.funding_type==personal"></span> ทุน ส่วนตัว <small>(ไม่ต้องตอบข้อ 2.2-2.7)</small></p>
+    </td>
+    <td class="lines">
+      <p><b>2.2 ชื่อผู้รับทุน</b> <span data-f="funding.recipient_name"></span></p>
+      <p><b>2.3 จำนวนเงิน</b> (ประมาณ) <span data-f="funding.amount_baht" data-fmt="money"></span> บาท</p>
+      <p><b>2.4 สถานะผู้รับทุน</b></p>
+      <p><span data-c="funding.recipient_status==bachelor"></span> นักศึกษา ปริญญาตรี &nbsp; <span data-c="funding.recipient_status==master"></span> นักศึกษา ปริญญาโท &nbsp; <span data-c="funding.recipient_status==doctoral"></span> นักศึกษา ปริญญาเอก</p>
+      <p><span data-c="funding.recipient_status==lecturer"></span> อาจารย์ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span data-c="funding.recipient_status==other"></span> อื่นๆ ระบุ....................................</p>
+      <p><b>2.5 ระบุ</b> ชื่อทุน ภาษาไทย <span data-f="funding.grant_name_th"></span></p>
+      <p><b>2.6 ระบุ</b> ชื่อทุน ภาษาอังกฤษ <span data-f="funding.grant_name_en"></span></p>
+      <p><b>2.7 ระบุ</b> รหัสทุนวิจัย <span data-f="funding.grant_code"></span></p>
+    </td>
+  </tr>
+</table>
+
+<!-- 3. ข้อมูลโครงการ -->
+<table class="f">
+  <colgroup><col><col class="yn1"><col class="yn2"></colgroup>
+  <tr><td colspan="3" class="h">3. ข้อมูลโครงการวิจัย</td></tr>
+  <tr><td><b>3.1 เป็นงานวิจัย (Research) หรือไม่</b> <span class="blue">(การเก็บข้อมูลและการวิเคราะห์อย่างเป็นระบบ เพื่อสร้างองค์ความรู้ใหม่ หรือการใช้ความรู้ที่มีอยู่เพื่อสร้างแนวคิดวิธีการและความเข้าใจใหม่)</span></td>
+      <td class="yn"><span data-yn="flags.is_research" data-v="1"></span> ใช่</td><td class="yn"><span data-yn="flags.is_research" data-v="0"></span> ไม่ใช่</td></tr>
+  <tr><td><b>3.2 เป็นการวิจัยในมนุษย์ (Human) หรือไม่</b></td>
+      <td class="yn"><span data-yn="flags.is_human_subject" data-v="1"></span> ใช่</td><td class="yn"><span data-yn="flags.is_human_subject" data-v="0"></span> ไม่ใช่</td></tr>
+  <tr><td colspan="3"><u>หมายเหตุ</u>: คณะกรรมการจริยธรรมการวิจัยในมนุษย์ รับพิจารณา<b>โครงการวิจัยในมนุษย์</b> หมายถึง กระบวนการศึกษาที่ทำอย่างเป็นระบบที่มีการทดลอง หรือการกระทำต่อมนุษย์ การสอบถาม การสัมภาษณ์ หรือการเก็บข้อมูลส่วนบุคคล การศึกษาจากเวชระเบียนหรือข้อมูลด้านสุขภาพของบุคคล หรือการเก็บตัวอย่างทางชีวภาพของมนุษย์ หรือวัสดุที่ได้มาจากมนุษย์ เช่น วัสดุสิ่งส่งตรวจ เลือด ปัสสาวะ อวัยวะ เนื้อเยื่อ เซลล์ ดีเอ็นเอ สารพันธุกรรม ส่วนประกอบของเซลล์ น้ำคัดหลั่งหรือของเหลวในร่างกาย หรือวัสดุอื่น ๆ ซึ่งอาจได้รับการเก็บรวบรวมเพื่อวัตถุประสงค์ในการวิจัยที่จำเพาะ หรือเพื่อวัตถุประสงค์อื่น ๆ โดยไม่ว่าจะคาดหมายไว้หรือไม่ในขณะนั้น ว่าวัสดุเหล่านี้จะมีการนำมาใช้ในการวิจัย รวมไปถึงการศึกษาทางด้านสังคมศาสตร์ พฤติกรรมศาสตร์ และมนุษยศาสตร์ในผู้เข้าร่วมการวิจัย (Participants) ปกติและผู้ป่วย</td></tr>
+  <tr><td colspan="3"><b>3.3 วันที่จะเริ่มต้นงานวิจัย :</b> <span data-f="meta.start_date" data-fmt="date"></span></td></tr>
+  <tr><td colspan="3" class="blue">หมายเหตุ: โครงการวิจัยจะเริ่มดำเนินการในมนุษย์ได้ ภายหลังได้รับการรับรองจากคณะกรรมการฯ เท่านั้น</td></tr>
+  <tr><td colspan="3"><b>3.4 วันที่คาดว่างานวิจัยจะเสร็จสิ้น :</b> <span data-f="meta.end_date" data-fmt="date"></span></td></tr>
+  <tr><td colspan="3"><b>3.5 วัตถุประสงค์หลักของการวิจัย :</b> <span data-f="methodology.primary_objective"></span></td></tr>
+</table>
+
+<!-- 4. กลุ่มประชากร -->
+<table class="f">
+  <colgroup><col style="width:37%"><col style="width:29%"><col></colgroup>
+  <tr><td colspan="3" class="h">4. กลุ่มประชากรที่ทำการศึกษา <span style="font-weight:400">(เลือกได้มากกว่า 1 ข้อ)</span></td></tr>
+  <tr>
+    <td class="lines" style="border-right:0">
+      <p><span data-c="population.healthy"></span> 4.1 ประชากรสุขภาพดี</p>
+      <p><span data-c="population.patients"></span> 4.2 ผู้ป่วย (ทั่วไป)</p>
+      <p><span data-c="population.chronic_patients"></span> 4.3 ผู้ป่วยโรคเรื้อรัง</p>
+      <p><span data-c="population.pregnant"></span> 4.4 หญิงตั้งครรภ์</p>
+      <p><span data-c="population.children"></span> 4.5 เด็ก <span class="blue">(ให้แนบ AP 03_4/2026)</span></p>
+    </td>
+    <td class="lines" style="border-left:0;border-right:0">
+      <p><span data-c="population.military_police"></span> 4.6 ทหาร / ตำรวจ</p>
+      <p><span data-c="population.students"></span> 4.7 นักเรียน นักศึกษา</p>
+      <p><span data-c="population.institutional_staff"></span> 4.8 บุคลากรในสถาบัน</p>
+      <p><span data-c="population.ethnic_groups"></span> 4.9 กลุ่มชาติพันธุ์</p>
+      <p><span data-c="population.refugees"></span> 4.10 ผู้อพยพ /ผู้ลี้ภัย</p>
+    </td>
+    <td class="lines" style="border-left:0">
+      <p><span data-c="population.homeless"></span> 4.11 คนไร้บ้าน คนเร่ร่อน</p>
+      <p><span data-c="population.prisoners"></span> 4.12 นักโทษ ผู้ถูกคุมขัง</p>
+      <p><span data-c="population.cognitive_impaired"></span> 4.13 ผู้บกพร่องทางสติปัญญา</p>
+      <p><span data-c="population.terminally_ill"></span> 4.14 ผู้ป่วยระยะสุดท้าย</p>
+      <p><span data-c="population.other"></span> 4.15 อื่นๆ ระบุ <span data-f="population.other"></span></p>
+    </td>
+  </tr>
+</table>
+
+<!-- 5. จัดประเภทการพิจารณา -->
+<table class="f">
+  <colgroup><col><col class="yn1"><col class="yn2"></colgroup>
+  <tr><td colspan="3" class="h">5. รายละเอียดของโครงการวิจัย เพื่อจัดประเภทการพิจารณาโครงการวิจัย</td></tr>
+  <tr><td><b>5.1 เป็นงานวิจัยด้านการศึกษา</b></td><td class="yn"><span data-yn="classification.is_education" data-v="1"></span> ใช่</td><td class="yn"><span data-yn="classification.is_education" data-v="0"></span> ไม่ใช่</td></tr>
+  <tr><td><b>5.2 เป็นงานวิจัยเชิงสำรวจ สัมภาษณ์ หรือเฝ้าสังเกตพฤติกรรมสาธารณะ</b></td><td class="yn"><span data-yn="classification.is_survey_interview" data-v="1"></span> ใช่</td><td class="yn"><span data-yn="classification.is_survey_interview" data-v="0"></span> ไม่ใช่</td></tr>
+  <tr><td class="indent">1) มีการเก็บข้อมูลส่วนบุคคล เช่น ชื่อ-สกุล หรือ Hospital Number หรือไม่</td><td class="yn"><span data-yn="risks.collects_personal_data" data-under="classification.is_survey_interview" data-v="1"></span> มี</td><td class="yn"><span data-yn="risks.collects_personal_data" data-under="classification.is_survey_interview" data-v="0"></span> ไม่มี</td></tr>
+  <tr><td class="indent">2) ขั้นตอนและผลการวิจัยทำให้ผู้เข้าร่วมงานวิจัยมีความเสี่ยงต่อการเป็นคดีทางอาญา หรือทางแพ่ง หรือเกิดความเสียหายต่อสถานะการเงิน การจ้างงาน โอกาสในการศึกษา หรือ ชื่อเสียง หรือไม่</td><td class="yn"><span data-yn="risks.legal_or_reputational_risk" data-under="classification.is_survey_interview" data-v="1"></span> มี</td><td class="yn"><span data-yn="risks.legal_or_reputational_risk" data-under="classification.is_survey_interview" data-v="0"></span> ไม่มี</td></tr>
+  <tr><td><b>5.3 เป็นงานวิจัยที่มีการแทรกแซงพฤติกรรมที่ไม่สุ่มเสี่ยง</b> (เช่น การเล่นเกมออนไลน์)</td><td class="yn"><span data-yn="ap01_1.q5_3" data-v="1"></span> ใช่</td><td class="yn"><span data-yn="ap01_1.q5_3" data-v="0"></span> ไม่ใช่</td></tr>
+  <tr><td class="indent">1) มีการเก็บข้อมูลส่วนบุคคล เช่น ชื่อ-สกุล หรือ Hospital Number หรือไม่</td><td class="yn"><span data-yn="risks.collects_personal_data" data-under="ap01_1.q5_3" data-v="1"></span> มี</td><td class="yn"><span data-yn="risks.collects_personal_data" data-under="ap01_1.q5_3" data-v="0"></span> ไม่มี</td></tr>
+  <tr><td class="indent">2) ขั้นตอนและผลการวิจัยมีผลทำให้ผู้เข้าร่วมงานวิจัยมีความเสี่ยงต่อการเป็นคดีทางอาญาหรือทางแพ่ง หรือเกิดความเสียหายต่อสถานะการเงิน การจ้างงาน หรือ ชื่อเสียง</td><td class="yn"><span data-yn="risks.legal_or_reputational_risk" data-under="ap01_1.q5_3" data-v="1"></span> มี</td><td class="yn"><span data-yn="risks.legal_or_reputational_risk" data-under="ap01_1.q5_3" data-v="0"></span> ไม่มี</td></tr>
+  <tr><td class="indent">3) มีการปกปิดหรือหลอกลวงผู้เข้าร่วมงานวิจัยเกี่ยวกับวัตถุประสงค์และวิธีการทดสอบที่แท้จริง หรือไม่</td><td class="yn"><span data-yn="risks.uses_deception" data-under="ap01_1.q5_3" data-v="1"></span> มี</td><td class="yn"><span data-yn="risks.uses_deception" data-under="ap01_1.q5_3" data-v="0"></span> ไม่มี</td></tr>
+  <tr><td><b>5.4 เป็นงานวิจัยที่ใช้ข้อมูลส่วนบุคคล หรือตัวอย่างชีวภาพจากมนุษย์ที่เก็บไว้แล้ว</b></td><td class="yn"><span data-yn="classification.is_secondary_data" data-v="1"></span> ใช่</td><td class="yn"><span data-yn="classification.is_secondary_data" data-v="0"></span> ไม่ใช่</td></tr>
+  <tr data-if="classification.is_secondary_data"><td colspan="3" class="indent">ตัวอย่างชีวภาพที่นำมาวิจัย คือ <span data-f="ap01_1.q5_4_specimen"></span></td></tr>
+  <tr><td class="indent">1) มีการเก็บข้อมูลส่วนบุคคล เช่น ชื่อ-สกุล หรือ Hospital Number หรือไม่</td><td class="yn"><span data-yn="risks.collects_personal_data" data-under="classification.is_secondary_data" data-v="1"></span> มี</td><td class="yn"><span data-yn="risks.collects_personal_data" data-under="classification.is_secondary_data" data-v="0"></span> ไม่มี</td></tr>
+  <tr><td class="indent">2) ขั้นตอนและผลการวิจัยมีผลทำให้ผู้เข้าร่วมงานวิจัยมีความเสี่ยงต่อการเป็นคดีทางอาญาหรือทางแพ่ง หรือเกิดความเสียหายต่อสถานะการเงิน การจ้างงาน หรือ ชื่อเสียง</td><td class="yn"><span data-yn="risks.legal_or_reputational_risk" data-under="classification.is_secondary_data" data-v="1"></span> มี</td><td class="yn"><span data-yn="risks.legal_or_reputational_risk" data-under="classification.is_secondary_data" data-v="0"></span> ไม่มี</td></tr>
+  <tr><td class="indent">3) มีการเชื่อมโยงข้อมูลถึงตัวบุคคล หรือข้อมูลส่วนบุคคลอื่นๆ หรือไม่</td><td class="yn"><span data-yn="ap01_1.q5_4_linkage" data-under="classification.is_secondary_data" data-v="1"></span> มี</td><td class="yn"><span data-yn="ap01_1.q5_4_linkage" data-under="classification.is_secondary_data" data-v="0"></span> ไม่มี</td></tr>
+  <tr><td class="indent">4) มีการศึกษาข้อมูลส่วนบุคคลที่อ่อนไหว (Sensitive personal data) หรือไม่</td><td class="yn"><span data-yn="ap01_1.q5_4_sensitive" data-under="classification.is_secondary_data" data-v="1"></span> มี</td><td class="yn"><span data-yn="ap01_1.q5_4_sensitive" data-under="classification.is_secondary_data" data-v="0"></span> ไม่มี</td></tr>
+  <tr><td class="indent">5) มีการศึกษาข้อมูลเกี่ยวกับพันธุศาสตร์ หรือไม่</td><td class="yn"><span data-yn="classification.has_genetics" data-under="classification.is_secondary_data" data-v="1"></span> มี</td><td class="yn"><span data-yn="classification.has_genetics" data-under="classification.is_secondary_data" data-v="0"></span> ไม่มี</td></tr>
+  <tr><td><b>5.5 เป็นงานวิจัยเกี่ยวกับการรวบรวมและวิเคราะห์ข้อมูลสุขภาพ</b> ในงานที่มีวัตถุประสงค์ ด้านสาธารณสุขหรือบริการสุขภาพ หรือ เชื่อมโยงถึงข้อมูลส่วนบุคคลได้</td><td class="yn"><span data-yn="ap01_1.q5_5" data-v="1"></span> ใช่</td><td class="yn"><span data-yn="ap01_1.q5_5" data-v="0"></span> ไม่ใช่</td></tr>
+  <tr><td><b>5.6 เป็นงานวิจัยที่กระทำโดยหน่วยงานของรัฐบาล</b> หรือผู้ที่ได้รับมอบหมายจากรัฐบาล ให้ใช้ข้อมูลในฐานข้อมูลที่เก็บไว้เพื่อวัตถุประสงค์อื่นนอกงานวิจัย</td><td class="yn"><span data-yn="ap01_1.q5_6" data-v="1"></span> ใช่</td><td class="yn"><span data-yn="ap01_1.q5_6" data-v="0"></span> ไม่ใช่</td></tr>
+  <tr><td><b>5.7 เป็นงานวิจัยที่ดำเนินการเพื่อประเมิน ปรับปรุง หรือตรวจสอบ</b> โครงการเพื่อสาธารณประโยชน์หรืองานบริการ</td><td class="yn"><span data-yn="ap01_1.q5_7" data-v="1"></span> ใช่</td><td class="yn"><span data-yn="ap01_1.q5_7" data-v="0"></span> ไม่ใช่</td></tr>
+  <tr><td><b>5.8 เป็นงานวิจัยที่เกี่ยวกับรสชาติ คุณภาพของอาหาร และความพึงพอใจของผู้บริโภค</b></td><td class="yn"><span data-yn="ap01_1.q5_8" data-v="1"></span> ใช่</td><td class="yn"><span data-yn="ap01_1.q5_8" data-v="0"></span> ไม่ใช่</td></tr>
+  <tr><td><b>5.9 เป็นงานวิจัยสารปนเปื้อน สารเคมี เชื้อโรค</b> ที่มาจากมนุษย์ หรือกระทำขึ้นจากมนุษย์ โดยไม่สามารถเชื่อมโยงถึงตัวบุคคล หรือชุมชน</td><td class="yn"><span data-yn="ap01_1.q5_9" data-v="1"></span> ใช่</td><td class="yn"><span data-yn="ap01_1.q5_9" data-v="0"></span> ไม่ใช่</td></tr>
+  <tr><td><b>5.10 เป็นงานวิจัยที่ใช้เซลล์เพาะเลี้ยงจากเนื้อเยื่อมนุษย์</b> ที่ปรับสภาพให้เป็น cell line โดยไม่สามารถเชื่อมโยงถึงตัวบุคคล</td><td class="yn"><span data-yn="ap01_1.q5_10" data-v="1"></span> ใช่</td><td class="yn"><span data-yn="ap01_1.q5_10" data-v="0"></span> ไม่ใช่</td></tr>
+  <tr><td><b>5.11 เป็นงานวิจัยในศพหรืออวัยวะที่บริจาค</b> เพื่อการศึกษาหรือวิจัย</td><td class="yn"><span data-yn="classification.uses_cadaver" data-v="1"></span> ใช่</td><td class="yn"><span data-yn="classification.uses_cadaver" data-v="0"></span> ไม่ใช่</td></tr>
+  <tr><td><b>5.12 เป็นรายงานผู้ป่วย (case report)</b> ที่มีจำนวนผู้ป่วยไม่เกิน 3 ราย</td><td class="yn"><span data-yn="classification.is_case_report" data-v="1"></span> ใช่</td><td class="yn"><span data-yn="classification.is_case_report" data-v="0"></span> ไม่ใช่</td></tr>
+</table>
+
+<!-- 6. Expedited -->
+<table class="f">
+  <colgroup><col><col class="yn1"><col class="yn2"></colgroup>
+  <tr><td colspan="3" class="h">6. รายละเอียดของโครงการวิจัย เพื่อจัดประเภทการพิจารณาโครงการวิจัย (Expedited)</td></tr>
+  <tr><td><b>6.1 มีการเก็บเลือดเพื่อวัตถุประสงค์ของงานวิจัย</b></td><td class="yn"><span data-yn="ap01_1.q6_1" data-v="1"></span> ใช่</td><td class="yn"><span data-yn="ap01_1.q6_1" data-v="0"></span> ไม่ใช่</td></tr>
+  <tr><td><b>6.2 มีการเก็บตัวอย่างชีวภาพ (นอกจากเลือด) เพื่องานวิจัย</b></td><td class="yn"><span data-yn="ap01_1.q6_2" data-v="1"></span> ใช่</td><td class="yn"><span data-yn="ap01_1.q6_2" data-v="0"></span> ไม่ใช่</td></tr>
+  <tr data-if="ap01_1.q6_2"><td colspan="3" class="indent">ตัวอย่างชีวภาพที่เก็บ คือ <span data-f="ap01_1.q6_2_specimen"></span></td></tr>
+  <tr><td class="indent">มีการใช้ยานอนหลับ เพิ่มเติมจากวัตถุประสงค์ทางคลินิก</td><td class="yn"><span data-yn="ap01_1.q6_2_sedative" data-under="ap01_1.q6_1||ap01_1.q6_2" data-v="1"></span> ใช่</td><td class="yn"><span data-yn="ap01_1.q6_2_sedative" data-under="ap01_1.q6_1||ap01_1.q6_2" data-v="0"></span> ไม่ใช่</td></tr>
+  <tr><td class="indent">มีการใช้ยาระงับความรู้สึกตัว (general anesthesia) เพิ่มเติมจากวัตถุประสงค์ทางคลินิก</td><td class="yn"><span data-yn="ap01_1.q6_2_anesthesia" data-under="ap01_1.q6_1||ap01_1.q6_2" data-v="1"></span> ใช่</td><td class="yn"><span data-yn="ap01_1.q6_2_anesthesia" data-under="ap01_1.q6_1||ap01_1.q6_2" data-v="0"></span> ไม่ใช่</td></tr>
+  <tr><td><b>6.3 มีการทำกิจกรรม หัตถการ หรือ การใช้อุปกรณ์เพื่องานวิจัย</b></td><td class="yn"><span data-yn="classification.has_procedure" data-v="1"></span> ใช่</td><td class="yn"><span data-yn="classification.has_procedure" data-v="0"></span> ไม่ใช่</td></tr>
+  <tr><td class="indent">เป็นกิจกรรมในชีวิตประจำวัน หรือไม่</td><td class="yn"><span data-yn="ap01_1.q6_3_daily" data-under="classification.has_procedure" data-v="1"></span> ใช่</td><td class="yn"><span data-yn="ap01_1.q6_3_daily" data-under="classification.has_procedure" data-v="0"></span> ไม่ใช่</td></tr>
+  <tr><td class="indent">การทำกิจกรรม หัตถการ มีการใช้ยานอนหลับ เพิ่มเติมจากวัตถุประสงค์ทางคลินิก</td><td class="yn"><span data-yn="ap01_1.q6_3_sedative" data-under="classification.has_procedure" data-v="1"></span> ใช่</td><td class="yn"><span data-yn="ap01_1.q6_3_sedative" data-under="classification.has_procedure" data-v="0"></span> ไม่ใช่</td></tr>
+  <tr><td class="indent">การทำกิจกรรม หัตถการ การใช้ยาระงับความรู้สึกตัว (general anesthesia) เพิ่มเติมจากวัตถุประสงค์ทางคลินิก หรือไม่</td><td class="yn"><span data-yn="ap01_1.q6_3_anesthesia" data-under="classification.has_procedure" data-v="1"></span> ใช่</td><td class="yn"><span data-yn="ap01_1.q6_3_anesthesia" data-under="classification.has_procedure" data-v="0"></span> ไม่ใช่</td></tr>
+  <tr><td><b>6.4 มีการให้ผลิตภัณฑ์ทดสอบ (Intervention) ในงานวิจัย</b><br>ผลิตภัณฑ์ทดสอบ (ชื่อยา เครื่องสำอาง อาหารเสริม) คือ <span data-f="ap01_1.q6_4_product" data-if="ap01_1.q6_4"></span></td><td class="yn"><span data-yn="ap01_1.q6_4" data-v="1"></span> ใช่</td><td class="yn"><span data-yn="ap01_1.q6_4" data-v="0"></span> ไม่ใช่</td></tr>
+  <tr><td><b>6.5 เป็นงานวิจัยที่ใช้ข้อมูลส่วนบุคคล หรือตัวอย่างชีวภาพ ที่เคยเก็บไว้ก่อนหน้านี้</b></td><td class="yn"><span data-yn="classification.is_secondary_data" data-v="1"></span> ใช่</td><td class="yn"><span data-yn="classification.is_secondary_data" data-v="0"></span> ไม่ใช่</td></tr>
+  <tr><td class="indent">มีการทบทวนเวชระเบียนหรือบันทึกการศึกษาที่ต้องเก็บข้อมูลส่วนบุคคล</td><td class="yn"><span data-yn="ap01_1.q6_5_records" data-under="classification.is_secondary_data" data-v="1"></span> มี</td><td class="yn"><span data-yn="ap01_1.q6_5_records" data-under="classification.is_secondary_data" data-v="0"></span> ไม่มี</td></tr>
+  <tr><td class="indent">มีการใช้ตัวอย่างชีวภาพ ที่เก็บจากผู้ป่วย หรือเก็บจากงานวิจัยอื่น หรือไม่</td><td class="yn"><span data-yn="ap01_1.q6_5_specimen" data-under="classification.is_secondary_data" data-v="1"></span> มี</td><td class="yn"><span data-yn="ap01_1.q6_5_specimen" data-under="classification.is_secondary_data" data-v="0"></span> ไม่มี</td></tr>
+  <tr><td class="indent">มีการใช้ตัวอย่างชีวภาพ ที่ต้องเก็บข้อมูลส่วนบุคคลเพื่อการวิจัย หรือไม่</td><td class="yn"><span data-yn="ap01_1.q6_5_specimen_pd" data-under="classification.is_secondary_data" data-v="1"></span> มี</td><td class="yn"><span data-yn="ap01_1.q6_5_specimen_pd" data-under="classification.is_secondary_data" data-v="0"></span> ไม่มี</td></tr>
+  <tr><td class="indent">มีการใช้ตัวอย่างชีวภาพ เพื่อศึกษาด้านพันธุกรรมศาสตร์ หรือโรคพันธุกรรม หรือไม่</td><td class="yn"><span data-yn="classification.has_genetics" data-under="classification.is_secondary_data" data-v="1"></span> มี</td><td class="yn"><span data-yn="classification.has_genetics" data-under="classification.is_secondary_data" data-v="0"></span> ไม่มี</td></tr>
+  <tr><td><b>6.6 เป็นงานวิจัยที่มีการเก็บข้อมูลกลุ่มบุคคล หรือทะเบียนผู้ป่วยเฉพาะโรค (Registry)</b></td><td class="yn"><span data-yn="ap01_1.q6_6" data-v="1"></span> ใช่</td><td class="yn"><span data-yn="ap01_1.q6_6" data-v="0"></span> ไม่ใช่</td></tr>
+  <tr><td><b>6.7 เป็นงานวิจัยที่มีการคัดกรองโรค</b> โดยการสัมภาษณ์ ตอบแบบสอบถาม ตรวจร่างกาย เพื่อการวิจัย ที่มีการเชื่อมโยงถึงข้อมูลส่วนบุคคลได้</td><td class="yn"><span data-yn="ap01_1.q6_7" data-v="1"></span> ใช่</td><td class="yn"><span data-yn="ap01_1.q6_7" data-v="0"></span> ไม่ใช่</td></tr>
+
+  <tr><td colspan="3" class="h">7. ความเสี่ยงที่อาจเกิดขึ้นกับผู้เข้าร่วมการวิจัย</td></tr>
+  <tr><td>7.1 Physical risk (เช่น เจ็บ แพ้ยา คลื่นไส้อาเจียน)</td><td class="yn"><span data-yn="risks.physical" data-v="1"></span> มี</td><td class="yn"><span data-yn="risks.physical" data-v="0"></span> ไม่มี</td></tr>
+  <tr><td>7.2 Psychological risk (เช่น อึดอัดใจ เสียเวลาตอบคำถาม)</td><td class="yn"><span data-yn="risks.psychological" data-v="1"></span> มี</td><td class="yn"><span data-yn="risks.psychological" data-v="0"></span> ไม่มี</td></tr>
+  <tr><td>7.3 Social/community risk (เช่น เสียชื่อเสียง มีตราบาป)</td><td class="yn"><span data-yn="risks.social" data-v="1"></span> มี</td><td class="yn"><span data-yn="risks.social" data-v="0"></span> ไม่มี</td></tr>
+
+  <tr><td colspan="3" class="h">8. ประโยชน์ที่คาดว่าจะได้รับจากการเข้าร่วมงานวิจัย</td></tr>
+  <tr><td>8.1 ประโยชน์โดยตรงต่อผู้เข้าร่วมการวิจัย (เช่น อาการเจ็บป่วยดีขึ้น)</td><td class="yn"><span data-yn="benefits.direct" data-v="1"></span> มี</td><td class="yn"><span data-yn="benefits.direct" data-v="0"></span> ไม่มี</td></tr>
+  <tr><td>8.2 ประโยชน์ต่อผู้ป่วยอื่น/สังคม/ชุมชน</td><td class="yn"><span data-yn="benefits.to_society" data-v="1"></span> มี</td><td class="yn"><span data-yn="benefits.to_society" data-v="0"></span> ไม่มี</td></tr>
+
+  <tr><td colspan="3" class="h">9. ข้อพิจารณาอื่น ๆ (เพิ่มรายละเอียดโครงการวิจัย ตาม AP 02/2026)</td></tr>
+  <tr><td>9.1 เป็นการวิจัยเกี่ยวกับยาแผนปัจจุบัน</td><td class="yn"><span data-yn="classification.has_drug" data-v="1"></span> เป็น</td><td class="yn"><span data-yn="classification.has_drug" data-v="0"></span> ไม่เป็น</td></tr>
+  <tr><td>9.2 เป็นงานวิจัยที่เกี่ยวกับอาหาร หรือ ผลิตภัณฑ์เสริมอาหาร</td><td class="yn"><span data-yn="classification.has_food_product||classification.has_dietary_supplement" data-v="1"></span> เป็น</td><td class="yn"><span data-yn="classification.has_food_product||classification.has_dietary_supplement" data-v="0"></span> ไม่เป็น</td></tr>
+  <tr><td>9.3 เป็นการวิจัยเกี่ยวกับผลิตภัณฑ์สมุนไพร</td><td class="yn"><span data-yn="classification.has_herbal" data-v="1"></span> เป็น</td><td class="yn"><span data-yn="classification.has_herbal" data-v="0"></span> ไม่เป็น</td></tr>
+  <tr><td>9.4 เป็นงานวิจัยที่เกี่ยวกับเครื่องสำอาง</td><td class="yn"><span data-yn="classification.has_cosmetic" data-v="1"></span> เป็น</td><td class="yn"><span data-yn="classification.has_cosmetic" data-v="0"></span> ไม่เป็น</td></tr>
+  <tr><td>9.5 เป็นงานวิจัยที่เป็นเครื่องมือแพทย์</td><td class="yn"><span data-yn="classification.has_medical_device" data-v="1"></span> เป็น</td><td class="yn"><span data-yn="classification.has_medical_device" data-v="0"></span> ไม่เป็น</td></tr>
+  <tr><td>9.6 เป็นการวิจัยที่เกี่ยวข้องกับมนุษย์พันธุศาสตร์ <span class="blue">(ถ้าเป็น ให้แนบ AP 03_3/2026)</span></td><td class="yn"><span data-yn="classification.has_genetics" data-v="1"></span> เป็น</td><td class="yn"><span data-yn="classification.has_genetics" data-v="0"></span> ไม่เป็น</td></tr>
+  <tr><td>9.7 มีการเก็บตัวอย่างชีวภาพเพื่อใช้ในอนาคต <span class="blue">(ถ้ามี ให้แนบ AP 03_2/2026)</span></td><td class="yn"><span data-yn="classification.has_future_biobank" data-v="1"></span> มี</td><td class="yn"><span data-yn="classification.has_future_biobank" data-v="0"></span> ไม่มี</td></tr>
+  <tr><td>9.8 มีการใช้ยาหลอก (Placebo) หรือไม่ ถ้ามี คือ <span data-f="ap01_1.placebo_detail" data-if="classification.has_placebo"></span></td><td class="yn"><span data-yn="classification.has_placebo" data-v="1"></span> มี</td><td class="yn"><span data-yn="classification.has_placebo" data-v="0"></span> ไม่มี</td></tr>
+  <tr><td><b>10. มีถ่ายภาพหรือบันทึกเสียง หรือไม่</b></td><td class="yn"><span data-yn="risks.audio_video_recording" data-v="1"></span> มี</td><td class="yn"><span data-yn="risks.audio_video_recording" data-v="0"></span> ไม่มี</td></tr>
+  <tr><td><b>11. เป็นงานวิจัยสหสถาบัน หรือไม่</b> ระบุสถาบันที่ร่วมวิจัย <span data-f="meta.multicenter_institutions" data-if="meta.is_multicenter"></span></td><td class="yn"><span data-yn="meta.is_multicenter" data-v="1"></span> เป็น</td><td class="yn"><span data-yn="meta.is_multicenter" data-v="0"></span> ไม่เป็น</td></tr>
+</table>
+
+<!-- 12. สิ่งที่ส่งมาด้วย -->
+<table class="f">
+  <colgroup><col style="width:47%"><col></colgroup>
+  <tr><td colspan="2" class="h">12. สิ่งที่ส่งมาด้วย</td></tr>
+  <tr>
+    <td class="lines" style="border-right:0">
+      <p><span data-c="attachments.brochure"></span> 10.1 คู่มือผู้วิจัย (investigator's Brochure)</p>
+      <p><span data-c="attachments.diary"></span> 10.2 สมุดบันทึก (diary)</p>
+      <p><span data-c="attachments.advert"></span> 10.3 โฆษณา</p>
+      <p><span data-c="attachments.leaflet"></span> 10.4 แผ่นพับ</p>
+      <p><span data-c="attachments.id_card"></span> 10.5 บัตรประจำตัวผู้เข้าร่วมการวิจัย</p>
+      <p><span data-c="attachments.instructions"></span> 10.6 คำแนะนำสำหรับผู้เข้าร่วมการวิจัย</p>
+    </td>
+    <td class="lines" style="border-left:0">
+      <p><span data-c="attachments.questionnaire"></span> 10.7 แบบสอบถาม (questionnaire / Google form)</p>
+      <p><span data-c="attachments.crf"></span> 10.8 แบบบันทึกข้อมูล (case record form)</p>
+      <p><span data-c="attachments.video"></span> 10.9 วิดีโอ / ซีดี / เทป (สำหรับผู้เข้าร่วมการวิจัย)</p>
+      <p><span data-c="attachments.fda"></span> 10.10 ใบรับรอง / ใบอนุญาต จากคณะกรรมการอาหารและยา</p>
+      <p><span data-c="attachments.social"></span> 10.11 ข้อความในสื่อออนไลน์ (social network)</p>
+      <p><span data-c="attachments.other"></span> 10.12 อื่น ๆ ระบุ <span data-f="attachments.other"></span></p>
+    </td>
+  </tr>
+</table>
+
+<!-- 13. ลงนาม -->
+<table class="f">
+  <colgroup><col style="width:20%"><col style="width:44%"><col style="width:18%"><col></colgroup>
+  <tr><td colspan="4" class="h">13. คณะผู้วิจัยลงนามและแนบประวัติการอบรม ICH-GCP และ จริยธรรมการวิจัยในมนุษย์ <span style="font-weight:400">(Human subject protection หรือ Human research protection) ให้แนบหลักฐานการอบรม ที่มีอายุรับรองตลอดระยะเวลาการทำวิจัย</span></td></tr>
+  <tr class="hs"><td class="c">คณะผู้วิจัย</td><td class="c">ลงนาม (sign)</td><td class="c">ICH-GCP</td><td class="c">HSP / HRP</td></tr>
+  <tr><td>ผู้วิจัยหลัก</td><td class="c lines"><p>........................................</p><p>( <span data-f="principal_investigator.title_th"></span> )</p><p>วันที่ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; / &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; /</p></td><td class="c"><span data-c="principal_investigator.has_ich_gcp"></span> มี</td><td class="c"><span data-c="principal_investigator.has_hsp"></span> มี</td></tr>
+  <tbody data-each="co_investigators" data-min="1"><template>
+    <tr><td>ผู้วิจัยร่วม</td><td class="c lines"><p>........................................</p><p>( <span data-f=".title_th" data-ph="ระบุ ชื่อ-สกุล"></span> )</p><p>วันที่ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; / &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; /</p></td><td class="c"><span data-c=".has_ich_gcp"></span> มี</td><td class="c"><span data-c=".has_hsp"></span> มี</td></tr>
+  </template></tbody>
+  <tbody data-each="advisors" data-min="1"><template>
+    <tr><td>อาจารย์ที่ปรึกษา</td><td class="c lines"><p>........................................</p><p>( <span data-f=".title_th" data-ph="ระบุ ชื่อ-สกุล"></span> )</p><p>วันที่ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; / &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; /</p></td><td class="c"><span data-c=".has_ich_gcp"></span> มี</td><td class="c"><span data-c=".has_hsp"></span> มี</td></tr>
+  </template></tbody>
+</table>
+</div>
+
+<!-- คำรับรอง (TH) -->
+<section class="newpage keep">
+  <h1 class="title" style="margin-bottom:3mm">คำรับรองของผู้วิจัยหลัก</h1>
+  <p>ข้าพเจ้า <span data-f="principal_investigator.title_th" style="text-decoration:underline"></span> &nbsp;สำนักวิชา/สังกัด <span data-f="principal_investigator.affiliation" style="text-decoration:underline"></span></p>
+  <p style="text-indent:10mm">ขอให้คำรับรองต่อคณะกรรมการจริยธรรมการวิจัย มหาวิทยาลัยแม่ฟ้าหลวง (คณะกรรมการ) ว่า</p>
+  <ol class="aff">
+    <li>ข้าพเจ้าจะเริ่มดำเนินการวิจัย ภายหลังจากได้รับหนังสือรับรองด้านจริยธรรมการวิจัย หรือ หนังสือยกเว้นการพิจารณาด้านจริยธรรมการวิจัย จากคณะกรรมการ เท่านั้น</li>
+    <li>ข้าพเจ้าได้ตรวจสอบความถูกต้องครบถ้วนของข้อมูลในโครงการวิจัยและเอกสารทั้งหมดที่นำเสนอต่อคณะกรรมการ</li>
+    <li>ในกรณีที่ผลการพิจารณาโครงการวิจัย คือ "ปรับปรุงแก้ไขเล็กน้อย" หรือ "ปรับปรุงแก้ไขและนำเข้าพิจารณาใหม่" ข้าพเจ้าจะดำเนินการแก้ไขตามคำแนะนำ และส่งกลับมาเพื่อให้คณะกรรมการพิจารณา <u>ภายใน 60 วันปฏิทิน</u> นับจากวันที่ได้รับการแจ้งผล (กรณีที่ส่งกลับล่าช้าหลังจาก 60 วันปฏิทิน นับจากวันที่ได้รับการแจ้งผล ผู้วิจัยจะต้องส่งโครงการเข้ามารับการพิจารณาใหม่ทั้งหมด เช่นเดียวกับการส่งโครงการครั้งแรก รวมทั้งต้องจ่ายค่าธรรมเนียมซ้ำ)</li>
+    <li>เมื่อโครงการวิจัยได้รับการรับรองจากคณะกรรมการ ข้าพเจ้าจะปฏิบัติดังต่อไปนี้
+      <ol>
+        <li>ดำเนินการวิจัยตามที่ระบุในโครงการวิจัยอย่างเคร่งครัด</li>
+        <li>ใช้เอกสารข้อมูลและขอความยินยอมเข้าร่วมการวิจัย แบบสอบถาม แบบบันทึกข้อมูล และเอกสารประชาสัมพันธ์ ที่มีตราประทับหรือได้รับการรับรองจากคณะกรรมการ เท่านั้น</li>
+        <li>ส่งรายงานความก้าวหน้าของการวิจัย (AP 05/2026) ตามระยะเวลาที่คณะกรรมการกำหนดและภายใน 30 วัน ก่อนหมดอายุการรับรอง รวมทั้งส่งหนังสือขอต่ออายุการรับรอง ในกรณีที่การวิจัยยังไม่เสร็จสิ้น</li>
+        <li>ส่งรายงานส่วนแก้ไขเพิ่มเติมโครงการวิจัย (AP 06/2026) และโครงการวิจัยฉบับแก้ไข เมื่อมีการแก้ไขเพิ่มเติมโครงการวิจัย เพื่อแจ้งให้คณะกรรมการพิจารณารับรองก่อนดำเนินการตามที่ได้แก้ไขเพิ่มเติม (ยกเว้นในกรณีที่การแก้ไขเพิ่มเติมนั้นกระทำเพื่อความปลอดภัยของผู้เข้าร่วมการวิจัย)</li>
+        <li>ส่งรายงานเหตุการณ์ไม่พึงประสงค์ชนิดร้ายแรง (AP 07/2026) เมื่อมีเหตุการณ์ไม่พึงประสงค์ชนิดร้ายแรง</li>
+        <li>ส่งรายงานการการเบี่ยงเบนหรือไม่ปฏิบัติตามข้อกำหนด (AP 08/2026) เมื่อมีการเบี่ยงเบน หรือ ไม่ปฏิบัติตามโครงการวิจัยที่ได้รับการรับรอง</li>
+        <li>ส่งรายงานปิดโครงการวิจัย (AP 09/2026) เมื่อการวิจัยเสร็จสิ้น</li>
+      </ol>
+    </li>
+  </ol>
+  <div class="sign">
+    <p>ลงนามผู้วิจัยหลัก ..................................................................</p>
+    <p>( <span data-f="principal_investigator.title_th"></span> )</p>
+    <p>วันที่ ....................................</p>
+  </div>
+</section>
+
+<!-- Affirmation (EN) -->
+<section class="newpage keep">
+  <h1 class="title" style="margin-bottom:3mm">Investigator's Affirmation</h1>
+  <p>I (First name and last name) <span data-f="principal_investigator.name_en" style="text-decoration:underline"></span> &nbsp;School / Institution <span data-f="principal_investigator.affiliation_en" style="text-decoration:underline"></span></p>
+  <p style="text-indent:10mm">submit to the Mae Fah Luang University Ethics Committee on Human Research (MFU EC) the affirmation as followings:</p>
+  <ol class="aff">
+    <li>I will start to conduct the research only after receiving a Certificate of Approval or a Certificate of Exemption from the MFU EC.</li>
+    <li>I have checked the accuracy and completeness of the information in the research protocol and related documents presented to the MFU EC.</li>
+    <li>If the MFU EC considerations are "minor modification" or "major modification and resubmission", I will make corrections according to the recommendations and re-submit them for consideration within 60 calendar days after receiving the result notification. (In case, the resubmission is over 60 calendar days to be reconsidered. I will submit the new document for the initial review and repaying for fee)</li>
+    <li>After the research protocol has been approved by the MFU EC, I will comply with the followings:
+      <ol>
+        <li>Strictly conduct the research as required by the protocol.</li>
+        <li>Use only the information sheet, consent form, questionnaire, case record form and advertisement bearing the MFU EC stamp of approval.</li>
+        <li>Submit a progress report (AP 05/2026) for continuing review and for renewing the approval within 30 days before expiration date.</li>
+        <li>Submit an amendment report (AP 06/2026) with amended protocol when there are changes of the protocol for MFU EC approval before implementing any changes in the research (unless those changes are required urgently for the safety of the research subjects).</li>
+        <li>Submit a safety report (AP 07/2026) when there is any unanticipated problem or serious adverse event.</li>
+        <li>Submit a protocol deviation/non-compliance report (AP 08/2026) when there is any deviation or non-compliance with the approved protocol.</li>
+        <li>Submit a closing report (AP 09/2026) after the research is complete.</li>
+      </ol>
+    </li>
+  </ol>
+  <div class="sign">
+    <p>Principal investigator ..................................................................</p>
+    <p>( <span data-f="principal_investigator.name_en"></span> )</p>
+    <p>Date ....................................</p>
+  </div>
+</section>
+
+<!-- สำหรับเจ้าหน้าที่ (left blank on purpose: staff fill this part) -->
+<section class="newpage staff">
+  <hr>
+  <p><b><u>สำหรับเจ้าหน้าที่</u></b></p>
+  <p style="margin-top:4mm"><b>ค่าธรรมเนียมในการยื่นขอการพิจารณาจากคณะกรรมการจริยธรรมการวิจัย มหาวิทยาลัยแม่ฟ้าหลวง</b></p>
+  <p>(ประกาศมหาวิทยาลัยแม่ฟ้าหลวง เรื่องค่าธรรมเนียมการยื่นเสนอขอรับการพิจารณาจริยธรรมการวิจัยในมนุษย์ มหาวิทยาลัยแม่ฟ้าหลวง พ.ศ. 2567 : ประเภทการพิจารณาโครงการวิจัยที่เสนอขอรับการพิจารณา<b><u>ครั้งแรก</u></b>)</p>
+  <ol class="aff" style="list-style:none;padding-left:0">
+    <li><span class="cb"></span> โครงการวิจัยที่ได้รับทุนจากภาครัฐ ภายในประเทศ หรือหน่วยงานที่ไม่แสวงหาผลกำไร 3,500 บาทต่อโครงการ</li>
+    <li><span class="cb"></span> โครงการวิจัยที่ได้รับทุนจากบริษัทเอกชน ซึ่งแสวงหาผลกำไรทั้งภายในหรือภายนอกประเทศ หรือทุนจากหน่วยงานต่างประเทศ 7,000 บาท ต่อโครงการ</li>
+    <li><span class="cb"></span> โครงการวิจัยที่ได้รับทุนจากมหาวิทยาลัยแม่ฟ้าหลวง หรือโครงการที่ไม่ได้รับทุนจากที่ใด และดำเนินการโดย พนักงานสายวิชาการ 1,500 บาทต่อโครงการ</li>
+    <li><span class="cb"></span> โครงการวิจัยที่ได้รับทุนจากมหาวิทยาลัยแม่ฟ้าหลวง หรือโครงการที่ไม่ได้รับทุนจากที่ใด และดำเนินการโดย นักศึกษาปริญญาโท หรือปริญญาเอก 500 บาทต่อโครงการ</li>
+    <li><span class="cb"></span> โครงการวิจัยที่ได้รับทุนจากมหาวิทยาลัยแม่ฟ้าหลวง หรือโครงการที่ไม่ได้รับทุนจากที่ใด และดำเนินการโดย นักศึกษาปริญญาตรี ได้รับการยกเว้นค่าธรรมเนียม</li>
+    <li><span class="cb"></span> โครงการวิจัยที่มีการดำเนินงานในหลายสถาบันภายใต้ข้อตกลงการร่วมมือด้านการวิจัย ร่วมกับคณะกรรมการกลางพิจารณาจริยธรรมการวิจัยในคน (CREC) 1,500 บาทต่อโครงการ</li>
+  </ol>
+  <p style="margin-top:3mm"><b>สำหรับเจ้าหน้าที่ กำหนดรหัสโครงการวิจัย</b></p>
+  <p><span class="cb"></span> โครงการวิจัยที่ส่งเข้ามา เพื่อรับการพิจารณา ครั้งแรก กำหนดรหัส &nbsp;&nbsp;&nbsp;&nbsp; EC ..............................</p>
+  <p><span class="cb"></span> โครงการวิจัยที่ส่งเข้ามา ภายหลังปรับปรุงแก้ไข และนำเข้าพิจารณาใหม่ &nbsp;&nbsp;&nbsp;&nbsp; EC ..............................</p>
+</section>
+</template>
+
+<script type="module">
+import { boot } from "../src/fill.js";
+boot();
+</script>
+</body>
+</html>

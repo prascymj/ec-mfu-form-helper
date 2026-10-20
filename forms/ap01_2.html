@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AP 01_2 Conflict of Interest</title>
+<link rel="stylesheet" href="_base.css">
+<style>
+@page { @top-right { content: "AP 01_2/2026"; font-family: "EC Sarabun", "TH Sarabun New", sans-serif; font-size: 12pt; color: #444; } }
+.coi + .coi { break-before: page; }
+.coi .who { margin: 0 0 1mm; }
+.coi table.f td.n { width: 7mm; padding-right: 0; }
+.coi table.f .item { display: grid; grid-template-columns: 7mm 1fr; }
+.coi ol.notes { padding-left: 7mm; margin: 0; color: #1f4e9c; }
+.coi .signrow { display: grid; grid-template-columns: auto 1fr auto auto; column-gap: 4mm; margin-top: 8mm; }
+</style>
+</head>
+<body>
+<div class="bar">
+  <div><b>AP 01_2/2026 เอกสารเปิดเผยการมีผลประโยชน์ทับซ้อน</b> <span class="note">ร่างให้ผู้วิจัยตรวจ ไม่ใช่การรับรองจริยธรรม; ผู้วิจัยแต่ละคนต้องยืนยันคำตอบเอง</span><br><span class="stat" id="stat"></span></div>
+  <div><label class="btn">เปิดไฟล์ JSON<input type="file" id="json-file" accept=".json"></label> <button id="print">พิมพ์ / บันทึก PDF</button></div>
+</div>
+
+<div class="sheet"></div>
+
+<template id="form-src">
+<div class="run-head"><span>Version............ Date.........................</span><span>AP 01_2/2026</span></div>
+<div data-each="coi_declarations" data-min="1"><template>
+<section class="coi">
+  <h1 class="title">เอกสารเปิดเผยการมีผลประโยชน์ทับซ้อน (Declaration of Conflict of Interest)</h1>
+  <p class="blue">โปรดเลือก ( / ) และระบุรายละเอียดการมีผลประโยชน์ทับซ้อนของคณะผู้วิจัยในโครงการวิจัยนี้ <b>เป็นรายบุคคล</b></p>
+  <p class="who">ผู้วิจัย: <span data-f=".person_name"></span></p>
+  <table class="f">
+    <colgroup><col><col style="width:9%"><col style="width:9%"></colgroup>
+    <tr class="hs"><td class="c"><b>ผลประโยชน์ทับซ้อน</b></td><td class="c"><b>ใช่</b></td><td class="c"><b>ไม่ใช่</b></td></tr>
+    <tr><td><div class="item"><span>1.</span><span>ท่านได้รับผลประโยชน์จากผู้สนับสนุนการวิจัย เช่น เป็นเจ้าของ ถือครองหุ้น หรือไม่ (ถ้ามี อธิบาย หรือระบุร้อยละของจำนวนหุ้นทั้งหมด) <span data-f=".ownership_or_shares.detail" data-if=".ownership_or_shares.disclosed"></span></span></div></td>
+        <td class="c"><span data-yn=".ownership_or_shares.disclosed" data-v="1"></span></td><td class="c"><span data-yn=".ownership_or_shares.disclosed" data-v="0"></span></td></tr>
+    <tr><td><div class="item"><span>2.</span><span>ท่านมีตำแหน่งในบริษัทผู้สนับสนุนการวิจัย หรือไม่ (ถ้ามี ระบุตำแหน่ง) <span data-f=".position_in_sponsor.detail" data-if=".position_in_sponsor.disclosed"></span></span></div></td>
+        <td class="c"><span data-yn=".position_in_sponsor.disclosed" data-v="1"></span></td><td class="c"><span data-yn=".position_in_sponsor.disclosed" data-v="0"></span></td></tr>
+    <tr><td><div class="item"><span>3.</span><span>ท่านเป็นวิทยากรที่บรรยายเกี่ยวกับผลิตภัณฑ์ของผู้สนับสนุนการวิจัย หรือ ได้รับการสนับสนุน เช่น ร่วมเข้าประชุมวิชาการที่ต่างประเทศ หรือไม่ (ถ้ามี ระบุรายละเอียด) <span data-f=".speaker_or_sponsored.detail" data-if=".speaker_or_sponsored.disclosed"></span></span></div></td>
+        <td class="c"><span data-yn=".speaker_or_sponsored.disclosed" data-v="1"></span></td><td class="c"><span data-yn=".speaker_or_sponsored.disclosed" data-v="0"></span></td></tr>
+    <tr><td><div class="item"><span>4.</span><span>ท่านเป็นที่ปรึกษาของผู้สนับสนุนการวิจัย หรือไม่ (ถ้ามี ระบุเงินเดือน) <span data-f=".consultant.detail" data-if=".consultant.disclosed"></span></span></div></td>
+        <td class="c"><span data-yn=".consultant.disclosed" data-v="1"></span></td><td class="c"><span data-yn=".consultant.disclosed" data-v="0"></span></td></tr>
+    <tr><td><div class="item"><span>5.</span><span>ท่านมีส่วนเกี่ยวข้องกับผู้สนับสนุนการวิจัย ในด้านการจัดซื้อ การขาย การขึ้นทะเบียน การเป็นเจ้าของลิขสิทธิ์ หรือสิทธิบัตรยาหรือเครื่องมือแพทย์ที่ทำการศึกษาครั้งนี้ หรือไม่ (ถ้ามี ระบุรายละเอียด) <span data-f=".procurement_ip.detail" data-if=".procurement_ip.disclosed"></span></span></div></td>
+        <td class="c"><span data-yn=".procurement_ip.disclosed" data-v="1"></span></td><td class="c"><span data-yn=".procurement_ip.disclosed" data-v="0"></span></td></tr>
+    <tr><td><div class="item"><span>6.</span><span>ท่านมีความสัมพันธ์อื่น ๆ ที่ไม่ใช่ด้านการเงินกับผู้สนับสนุนการวิจัย เช่น ความสัมพันธ์ทางวิชาชีพ บุคคลในครอบครัว เครือญาติ หรือไม่ (ถ้ามี ระบุรายละเอียด) <span data-f=".nonfinancial_relationship.detail" data-if=".nonfinancial_relationship.disclosed"></span></span></div></td>
+        <td class="c"><span data-yn=".nonfinancial_relationship.disclosed" data-v="1"></span></td><td class="c"><span data-yn=".nonfinancial_relationship.disclosed" data-v="0"></span></td></tr>
+    <tr><td><div class="item"><span>7.</span><span>ท่านเป็นผู้ริเริ่มคิดโครงการ ผลิตภัณฑ์ หรือนวัตกรรมใดๆ (Innovator relationship) ให้แก่ผู้ให้ทุนสนับสนุนการวิจัย หรือไม่ (ถ้ามี ระบุรายละเอียด) <span data-f=".innovator_relationship.detail" data-if=".innovator_relationship.disclosed"></span></span></div></td>
+        <td class="c"><span data-yn=".innovator_relationship.disclosed" data-v="1"></span></td><td class="c"><span data-yn=".innovator_relationship.disclosed" data-v="0"></span></td></tr>
+    <tr><td><div class="item"><span>8.</span><span>ท่าน คู่สมรส หรือบุตรที่ยังไม่บรรลุนิติภาวะ มีส่วนได้เสียหรือความสัมพันธ์เชิงธุรกิจ/พาณิชย์กับผลิตภัณฑ์ นวัตกรรม หรือบริษัทผู้สนับสนุนการวิจัย ในโครงการนี้หรือไม่ (เช่น การเป็นเจ้าของสิทธิบัตร/นวัตกร, การถือหุ้น, การเป็นที่ปรึกษา, การใช้ข้อมูลเพื่อการโฆษณา, หรือได้รับค่าตอบแทนอื่นใด) (ถ้ามี ระบุรายละเอียด) <span data-f=".family_interest.detail" data-if=".family_interest.disclosed"></span></span></div></td>
+        <td class="c"><span data-yn=".family_interest.disclosed" data-v="1"></span></td><td class="c"><span data-yn=".family_interest.disclosed" data-v="0"></span></td></tr>
+    <tr><td><div class="item"><span>9.</span><span>ท่านมีผลประโยชน์อื่น ๆ นอกเหนือจากข้อ 1-8 (ถ้ามี ระบุรายละเอียด) <span data-f=".other_interest.detail" data-if=".other_interest.disclosed"></span></span></div></td>
+        <td class="c"><span data-yn=".other_interest.disclosed" data-v="1"></span></td><td class="c"><span data-yn=".other_interest.disclosed" data-v="0"></span></td></tr>
+    <tr><td colspan="3"><b>หากมีผลประโยชน์ทับซ้อน ตามที่ระบุในตารางด้านบน ผู้วิจัยมีแนวทางในการจัดการกับผลประโยชน์ทับซ้อนอย่างไร เพื่อมิให้กระทบกับผู้เข้าร่วมการวิจัยและความถูกต้องของข้อมูลจากการวิจัย โปรดระบุ</b> <span data-f=".management_plan" data-if=".management_plan"></span><span data-if="!.management_plan">..........................................................................</span></td></tr>
+  </table>
+  <p class="blue"><u>หมายเหตุ</u></p>
+  <ol class="notes">
+    <li>ท่าน หมายถึง ผู้วิจัย ผู้วิจัยร่วม หรือสมาชิกในครอบครัว หรือนักศึกษา/เจ้าหน้าที่ ที่ได้รับมอบหมายให้ทำงานวิจัยนี้</li>
+    <li>ผู้สนับสนุนการวิจัย หมายถึง ผู้ให้ทุนวิจัย หรือสนับสนุนยา ผลิตภัณฑ์ หรือเครื่องมือที่ใช้ในการวิจัย</li>
+    <li>การมีผลประโยชน์ทับซ้อนของคณะผู้วิจัย ไม่ใช่เหตุผลในการไม่เห็นชอบโครงการวิจัยหรือผู้วิจัย คณะกรรมการฯ จะพิจารณา ว่าผลประโยชน์ทับซ้อนนั้น มีผลกระทบต่อผู้เข้าร่วมการวิจัยหรือความถูกต้องของข้อมูลการวิจัยหรือไม่</li>
+  </ol>
+  <div class="signrow keep">
+    <span>ลงนามผู้วิจัย</span>
+    <div style="text-align:center"><p>.................................................................</p><p>( <span data-f=".person_name" data-ph="ระบุ ชื่อ-สกุล"></span> )</p></div>
+    <span>วันที่</span><span>........../................./.................</span>
+  </div>
+</section>
+</template></div>
+</template>
+
+<script type="module">
+import { boot } from "../src/fill.js";
+boot();
+</script>
+</body>
+</html>
