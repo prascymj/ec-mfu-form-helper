@@ -943,7 +943,7 @@ export function planFromTables(tables) {
 // so it is read from its heading to the next major heading, keeping paragraph breaks.
 const LIT_START = String.raw`^(?:การทบทวนวรรณกรรม|ทบทวนวรรณกรรม|การรวบรวมรายงานที่เกี่ยวข้อง|แนวคิด\s*(?:,\s*)?ทฤษฎี|ทฤษฎี(?:และ|\s)*(?:เอกสาร|งานวิจัย)ที่เกี่ยวข้อง|เอกสารและงานวิจัยที่เกี่ยวข้อง|ทบทวนเอกสาร|ผลงานวิจัย(?:ต่าง\s*ๆ)?\s*ที่เกี่ยวข้อง|งานวิจัยที่เกี่ยวข้อง|(?:review of\s+)?(?:related\s+)?literature(?:\s+review)?|related (?:work|studies))`;
 const REF_START = String.raw`^(?:เอกสารอ้างอิง|บรรณานุกรม|รายการอ้างอิง|references?|bibliography)`;
-const AFTER_LIT = String.raw`^(?:เอกสารอ้างอิง|บรรณานุกรม|รายการอ้างอิง|references?\b|bibliography|กระบวนการและวิธีการ|วิธีการดำเนิน|ระเบียบวิธี|ขอบเขต|กรอบแนวคิด|กรอบการวิจัย|สมมติฐาน|รูปแบบการวิจัย|ประชากร|study design|methods?\b|methodology|procedures?\b)`;
+const AFTER_LIT = String.raw`^(?:เอกสารอ้างอิง|บรรณานุกรม|รายการอ้างอิง|references?\b|bibliography|กระบวนการและวิธีการ|วิธีการดำเนิน|ระเบียบวิธี|ขอบเขต|กรอบแนวคิด|กรอบการวิจัย|สมมติฐาน|รูปแบบ(?:ของ)?(?:การ|งาน)วิจัย|ประชากร|ลักษณะ(?:ของ)?(?:กลุ่ม)?(?:ตัวอย่าง|ประชากร)|study design|methods?\b|methodology|procedures?\b)`;
 const AFTER_REF = String.raw`^(?:กระบวนการและวิธีการ|วิธีการดำเนิน|ระเบียบวิธี|แผนการดำเนิน|ขอบเขต|งบประมาณ|ภาคผนวก|ประวัติ|ระยะเวลา|appendix|methods?\b|methodology|procedures?\b|budget)`;
 // numbering in front of a heading: "8.", "8.1", "ก.", "บทที่ 2", "Chapter 2"
 const HEAD_LEAD = String.raw`^[\s\-•*#>]*(?:(?:บทที่|chapter)\s*\d{1,2}\.?\s*[:：]?\s*|\d{1,2}(?:\.\d{1,2})*\.?\s+|[ก-ฮ]\.\s+)?`;
@@ -968,6 +968,9 @@ function sectionSpan(text, startRe, stopRe, maxLines = 300) {
     if (tail && inlineValue && !search(LIT_START, tail, "i") && !search(String.raw`^(?:ของ|ที่|ระบุ|/|\(|สารสนเทศ)`, tail)) out.push({ i, t: tail });
     let j = i + 1;
     let parent = null; // "8" once a sub-heading "8.1" is seen: later "8.x" lines belong here
+    // "9. การรวบรวมรายงาน..." ends at "10. ..." whatever ข้อ 10 is called ("รูปแบบงานวิจัย")
+    const no = match(String.raw`^\s*(\d{1,2})\.\s`, lines[i]);
+    const nextNo = no ? Number(no[1]) + 1 : null;
     for (; j < lines.length && out.length < maxLines; j++) {
       const raw = lines[j];
       if (!strip(raw)) continue;
@@ -976,6 +979,8 @@ function sectionSpan(text, startRe, stopRe, maxLines = 300) {
       // a sub-heading of this section ("8.3 การวิเคราะห์ข้อมูล..." inside ข้อ 8) never ends it
       const ownSub = sub2 && sub2[1] === parent;
       if (!ownSub && shortLine(raw) && search(stopRe, headText(raw), "i")) break;
+      const top = nextNo && shortLine(raw) && match(String.raw`^\s*(\d{1,2})\.(?:\s+\S|\s*$)`, raw);
+      if (top && Number(top[1]) === nextNo && !isCitation(raw)) break; // not reference "10. Smith J..."
       out.push({ i: j, t: strip(sub(String.raw`^[\s\-•*>]+`, "", raw)) });
     }
     if (out.length) return { start: i, end: j, lines: out };
@@ -996,10 +1001,10 @@ export function literatureReview(text) {
 // that field, at its place in the text as a marker line "[[รูป 1]]" / "[[ตาราง 1]]";
 // the form draws the item where its marker is.
 export const MEDIA_MARK = /\[\[(รูป|ตาราง) (\d+)\]\]/g;
-const OTHER_MAJOR = String.raw`เอกสารอ้างอิง|บรรณานุกรม|รายการอ้างอิง|references?\b|bibliography|แผนการดำเนิน|แผนการใช้จ่าย|งบประมาณ|ระยะเวลา|ผลผลิต|ผลลัพธ์|ผลกระทบ|ประโยชน์ที่|ข้อพิจารณาด้านจริยธรรม|ภาคผนวก|ประวัติ|วัตถุประสงค์|หลักการและเหตุผล|ความสำคัญของ|กลุ่มเป้าหมาย|ส่วนที่\s*\d|บทสรุป|คำถาม(?:การ)?วิจัย|ระดับความพร้อม|มาตรฐานการวิจัย|หน่วยงานร่วม|พื้นที่ที่ได้รับประโยชน์`;
+const OTHER_MAJOR = String.raw`เอกสารอ้างอิง|บรรณานุกรม|รายการอ้างอิง|references?\b|bibliography|แผนการดำเนิน|แผนการใช้จ่าย|งบประมาณ|ระยะเวลา|ผลผลิต|ผลลัพธ์|ผลกระทบ|ประโยชน์ที่|ข้อพิจารณาด้านจริยธรรม|ภาคผนวก|ประวัติ|วัตถุประสงค์|หลักการและเหตุผล|ความสำคัญของ|กลุ่มเป้าหมาย|ส่วนที่\s*\d|บทสรุป|คำถาม(?:การ)?วิจัย|ระดับความพร้อม|มาตรฐานการวิจัย|หน่วยงานร่วม|พื้นที่ที่ได้รับประโยชน์|ลักษณะ(?:ของ)?(?:กลุ่ม)?(?:ตัวอย่าง|ประชากร)`;
 const MEDIA_TARGETS = [
   { path: "methodology.literature_review", start: LIT_START.slice(1) },
-  { path: "methodology.study_design", start: String.raw`(?:รูปแบบการวิจัย|การออกแบบการวิจัย|กรอบแนว(?:ความ)?คิด|กรอบการวิจัย|study design|research design|conceptual framework)` },
+  { path: "methodology.study_design", start: String.raw`(?:รูปแบบ(?:ของ)?(?:การ|งาน)วิจัย|การออกแบบการวิจัย|กรอบแนว(?:ความ)?คิด|กรอบการวิจัย|study design|research design|conceptual framework)` },
   { path: "methodology.procedures", start: String.raw`(?:กระบวนการและวิธีการ|วิธีการดำเนิน|ระเบียบวิธี|ขั้นตอนการวิจัย|แนวทางการดำเนินงาน|methods?\b|methodology|procedures?\b)` },
   // not a bare "คำจำกัดความ": grant forms use it for their own output-type tables
   { path: "methodology.operational_definitions", start: String.raw`(?:คำจำกัดความ(?:ที่ใช้ใน|เชิงปฏิบัติการ|ศัพท์)|นิยามศัพท์|นิยามเชิงปฏิบัติการ|operational definitions?)` },
