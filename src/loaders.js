@@ -476,9 +476,12 @@ export async function loadDocument(name, buf) {
     const outline = docxXmlToOutline(xml, styles ? new TextDecoder().decode(styles) : "");
     return { text: docxXmlToText(xml), tables: docxXmlToTables(xml), media: await docxMedia(buf, xml), outline };
   }
-  if (ext === "html" || ext === "htm" || ext === "doc") {
+  if (["html", "htm", "doc", "mht", "mhtml"].includes(ext)) {
     const s = new TextDecoder().decode(buf);
-    if (ext !== "doc" || isHtml(s)) return htmlToDocument(s);
+    if (isMime(s)) {
+      const page = mimeHtml(s);
+      if (page) return htmlToDocument(page);
+    } else if (ext !== "doc" || isHtml(s)) return htmlToDocument(s);
   }
   const text = await loadOther(ext, buf);
   return { text, tables: [], media: [], outline: textOutline(text) };
@@ -486,6 +489,36 @@ export async function loadDocument(name, buf) {
 
 // A web page (.html), or a ".doc" that is really HTML: the Word file the forms' "บันทึก Word
 // (.doc)" button saves is one, and so is a page saved as "Web Page" from Word.
+// The same with pictures is a web archive (MIME multipart/related, like Word's "Single File
+// Web Page" .mht): the page is its text/html part, base64 or quoted-printable.
+const isMime = (s) => /^\s*MIME-Version:/i.test(s.slice(0, 200)) && /multipart\/related/i.test(s.slice(0, 2000));
+function mimeHtml(s) {
+  const bound = (s.match(/boundary="?([^";\r\n]+)"?/i) || [])[1];
+  if (!bound) return null;
+  for (const part of s.split(`--${bound}`)) {
+    const cut = part.search(/\r?\n\r?\n/);
+    if (cut < 0) continue;
+    const head = part.slice(0, cut);
+    if (!/Content-Type:\s*text\/html/i.test(head)) continue;
+    const body = part.slice(cut).trim();
+    const charset = ((head.match(/charset="?([\w-]+)"?/i) || [])[1] || "utf-8").toLowerCase();
+    const enc = ((head.match(/Content-Transfer-Encoding:\s*([\w-]+)/i) || [])[1] || "").toLowerCase();
+    let bytes;
+    if (enc === "base64") bytes = Uint8Array.from(atob(body.replace(/\s+/g, "")), (c) => c.charCodeAt(0));
+    else if (enc === "quoted-printable") {
+      const t = body.replace(/=\r?\n/g, "");
+      const out = [];
+      for (let i = 0; i < t.length; i++) {
+        if (t[i] === "=" && /^[0-9A-F]{2}$/i.test(t.slice(i + 1, i + 3))) { out.push(parseInt(t.slice(i + 1, i + 3), 16)); i += 2; }
+        else out.push(...new TextEncoder().encode(t[i]));
+      }
+      bytes = Uint8Array.from(out);
+    } else return body;
+    try { return new TextDecoder(charset).decode(bytes); } catch { return new TextDecoder().decode(bytes); }
+  }
+  return null;
+}
+
 const isHtml = (s) => /^\s*(?:<!doctype html|<html|<\?xml[^>]*>\s*<html)/i.test(s.slice(0, 2000)) || /<html[\s>]/i.test(s.slice(0, 2000));
 
 const BLOCK = new Set(["ADDRESS", "ARTICLE", "ASIDE", "BLOCKQUOTE", "DD", "DIV", "DL", "DT", "FIGCAPTION", "FIGURE", "FOOTER",

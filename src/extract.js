@@ -979,8 +979,11 @@ function sectionSpan(text, startRe, stopRe, maxLines = 300) {
       // a sub-heading of this section ("8.3 การวิเคราะห์ข้อมูล..." inside ข้อ 8) never ends it
       const ownSub = sub2 && sub2[1] === parent;
       if (!ownSub && shortLine(raw) && search(stopRe, headText(raw), "i")) break;
-      const top = nextNo && shortLine(raw) && match(String.raw`^\s*(\d{1,2})\.(?:\s+\S|\s*$)`, raw);
-      if (top && Number(top[1]) === nextNo && !isCitation(raw)) break; // not reference "10. Smith J..."
+      // only a line that looks like a heading: short words, no year, link or ";" / ":" as a
+      // reference has ("10. กรมการแพทย์. แนวทาง... 2563.", "10. WHO. https://...")
+      const top = nextNo && match(String.raw`^\s*(\d{1,2})\.(?:\s+(\S.*))?$`, raw);
+      const headLike = top && strip(top[2] || "").length <= 60 && !/\d{4}|https?:|www\.|[;:]/.test(top[2] || "");
+      if (headLike && Number(top[1]) === nextNo && !isCitation(raw)) break;
       out.push({ i: j, t: strip(sub(String.raw`^[\s\-•*>]+`, "", raw)) });
     }
     if (out.length) return { start: i, end: j, lines: out };
