@@ -20,7 +20,9 @@ function afterLabel(text, label) {
   return m ? String(text).slice(m[0].length) : null;
 }
 
-const split = (v) => clean(v).split(/\n+|\s+(?=\d{1,2}[.)]\s)/).map((x) => x.replace(/^\s*(?:\d{1,2}[.)]|[-•])\s*/, "").trim()).filter(Boolean);
+// one item per line; a single line "1. ก 2. ข" is split at its numbers (not a value over
+// several lines: "ฉบับที่ 2. กรุงเทพฯ" inside a reference is not a new item)
+const split = (v) => { const c = clean(v); return (c.includes("\n") ? c.split(/\n+/) : c.split(/\s+(?=\d{1,2}[.)]\s)/)).map((x) => x.replace(/^\s*(?:\d{1,3}[.)]|[-•])\s*/, "").trim()).filter(Boolean); };
 // an amount: a number written with thousands commas wins over a bare year ("2570 828,000")
 const money = (v) => {
   // a year named as one ("ประจำปีงบประมาณ พ.ศ. 2569") is never the amount
@@ -239,7 +241,10 @@ export function readEcForm(s, text, tables, parseDate) {
     const noNum = (t) => norm(String(t).replace(/^\s*\d{1,2}(?:\.\d{1,2})*\.?\s*/, ""));
     const allLabels = new Set(entries.flatMap((e) => (e.kind === "hint" ? [] : [norm(e.label), noNum(e.label)])));
     const heads = [...new Set(entries.filter((e) => e.kind === "heading").map((e) => noNum(e.label)).filter((h) => h.length >= 6))];
-    const isHead = (l) => { const n = noNum(l); return heads.some((h) => n === h || (n.startsWith(h) && n.length < h.length + 40)); };
+    // the heading, or the heading with the EC's guidance after it in brackets, as the Word
+    // form prints it ("เอกสารอ้างอิง (ระบุตามมาตรฐานการเขียนเอกสารอ้างอิง ใช้รูปแบบ ...)")
+    const headIs = (n, h) => n === h || (n.startsWith(h) && (n.length < h.length + 40 || n[h.length] === "("));
+    const isHead = (l) => { const n = noNum(l); return heads.some((h) => headIs(n, h)); };
     // the form's guidance under a heading, kept in a filled form, is not the answer
     // a line that IS form text (the whole line, or a piece of one long guidance paragraph)
     const hints = new Set(entries.filter((e) => e.kind === "hint").map((e) => norm(e.label)));
@@ -248,7 +253,7 @@ export function readEcForm(s, text, tables, parseDate) {
     const numbered = /^\d{1,2}\.(?:\d{1,2}\.?)*\s+\S/; // "8. ...", "12.1 ..." (not "5 คน")
     for (const e of entries.filter((x) => x.kind === "heading")) {
       const h = noNum(e.label);
-      const i = lines.findIndex((l) => { const n = noNum(l); return n === h || (n.startsWith(h) && n.length < h.length + 40); });
+      const i = lines.findIndex((l) => headIs(noNum(l), h));
       if (i < 0 || e.path in found) continue;
       const no = (e.label.match(/^(\d{1,2}(?:\.\d{1,2})*)/) || [])[1];
       const body = [];

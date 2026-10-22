@@ -1401,7 +1401,13 @@ export function extractSubmissions(docs) {
     const formHas = parts.some((p) => isLocked(p, path));
     const order = [...parts.keys()].filter((i) => !formHas || isLocked(parts[i], path) || !parts[i].locked.size)
       .sort((a, b) => Number(isLocked(parts[b], path)) - Number(isLocked(parts[a], path)) || a - b);
-    const win = order.find((i) => !blank(vals[i], path)) ?? order[0] ?? 0;
+    let win = order.find((i) => !blank(vals[i], path)) ?? order[0] ?? 0;
+    // a list two files of the same rank answer (ข้อ 18 on two forms): the longer one, so a
+    // form printed with 3 references does not hide the 53 of another
+    if (Array.isArray(vals[win])) {
+      const rank = (i) => isLocked(parts[i], path);
+      for (const i of order) if (rank(i) === rank(win) && Array.isArray(vals[i]) && vals[i].length > vals[win].length) win = i;
+    }
     let v = vals[win];
     if (isLocked(parts[win], path)) locked.add(path);
     if (parts[win].sources[path]) sources[path] = parts[win].sources[path];
