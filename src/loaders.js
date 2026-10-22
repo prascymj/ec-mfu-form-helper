@@ -176,10 +176,27 @@ function cellShaded(tc) {
   return Boolean(fill) && !["auto", "ffffff", "none"].includes(fill);
 }
 
+// Check boxes drawn with a Wingdings symbol (w:sym) carry no text, so the table grid writes
+// them as "[/]" (ticked) or "[ ]" (empty); the flat text keeps python-docx's reading.
+const SYM_TICKED = new Set(["F0FE", "F0FD", "F078", "F0FC", "F052", "F054", "F0D6"]);
+const SYM_EMPTY = new Set(["F0A8", "F06F", "F071", "F0A3", "F030", "F0A1"]);
+function runTextBoxes(r) {
+  let s = "";
+  for (const c of r.children) {
+    if (c.name === "w:sym") {
+      const ch = String(c.attrs["w:char"] || "").toUpperCase();
+      s += SYM_TICKED.has(ch) ? "[/] " : SYM_EMPTY.has(ch) ? "[ ] " : "";
+    } else s += runText({ children: [c] });
+  }
+  return s;
+}
+const cellTextBoxes = (tc) => kids(tc, "w:p").map((p) => p.children.map((c) => (c.name === "w:r" ? runTextBoxes(c)
+  : c.name === "w:hyperlink" ? kids(c, "w:r").map(runTextBoxes).join("") : "")).join("")).join("\n");
+
 function collectTables(el, out) {
   for (const c of el.children || []) {
     if (c.name === "w:tbl") {
-      const grid = tableGrid(c).map((row) => row.cells.map((tc) => ({ text: cellText(tc).trim(), shaded: cellShaded(tc) })));
+      const grid = tableGrid(c).map((row) => row.cells.map((tc) => ({ text: cellTextBoxes(tc).trim(), shaded: cellShaded(tc) })));
       out.push(grid);
       for (const tr of kids(c, "w:tr")) for (const tc of kids(tr, "w:tc")) collectTables(tc, out);
     } else if (c.children && c.name !== "w:p") collectTables(c, out);
@@ -205,6 +222,179 @@ export function docxXmlToText(xml) {
     } else if (c.name === "w:tbl") parts.push(...tableToLines(c));
   }
   return parts.join("\n");
+}
+
+// ---------------------------------------------------------------- docx outline (headings)
+
+// Headings of the document, so any proposal can be cut into sections by its own structure
+// instead of by phrases known in advance: [{ line, text, level }], `line` being the index in
+// docxXmlToText's output. A paragraph is a heading when Word says so (a Heading / หัวเรื่อง
+// style, an outline level), or when it is short and numbered (list numbering or typed
+// "8." / "8.1" / "บทที่ 2") or set entirely in bold. Level: 1 = top; deeper = larger.
+function styleTable(stylesXml) {
+  const map = {};
+  if (!stylesXml) return map;
+  for (const st of parseXml(stylesXml).children.flatMap((x) => x.children || []).filter((x) => x.name === "w:style")) {
+    const id = st.attrs["w:styleId"];
+    const name = kid(st, "w:name")?.attrs["w:val"] || "";
+    const ol = kid(kid(st, "w:pPr") || { children: [] }, "w:outlineLvl")?.attrs["w:val"];
+    const hm = name.match(/^(?:heading|หัวเรื่อง)\s*(\d)/i);
+    let level = ol != null ? Number(ol) + 1 : hm ? Number(hm[1]) : /^title$|^ชื่อเรื่อง$/i.test(name) ? 1 : null;
+    if (level != null && level > 9) level = null; // outline level 9 = body text
+    map[id] = { level, basedOn: kid(st, "w:basedOn")?.attrs["w:val"] };
+  }
+  return map;
+}
+
+const TYPED_NUMBER = /^\s*(?:(บทที่|chapter)\s*\d{1,2}|(\d{1,2}(?:\.\d{1,2})*)\.?|[ก-ฮ]\.)\s+\S/i;
+
+function headingLevel(p, text, styles) {
+  const t = text.trim();
+  if (!t || t.length > 110) return null;
+  const pPr = kid(p, "w:pPr") || { children: [] };
+  const styleId = kid(pPr, "w:pStyle")?.attrs["w:val"];
+  let st = styles[styleId];
+  for (let n = 0; st && st.level == null && st.basedOn && n < 5; n++) st = styles[st.basedOn];
+  const ol = kid(pPr, "w:outlineLvl")?.attrs["w:val"];
+  if (ol != null && Number(ol) < 9) return Number(ol) + 1;
+  if (st?.level != null) return st.level;
+  const typed = t.match(TYPED_NUMBER);
+  if (typed && t.length <= 90 && !/[.!?]$|ๆ$/.test(t)) return typed[1] ? 1 : typed[2] ? typed[2].split(".").length : 3;
+  const num = kid(pPr, "w:numPr");
+  const runs = kids(p, "w:r").filter((r) => runText(r).trim());
+  const bold = runs.length > 0 && runs.every((r) => {
+    const b = kid(kid(r, "w:rPr") || { children: [] }, "w:b");
+    return b && b.attrs["w:val"] !== "0" && b.attrs["w:val"] !== "false";
+  });
+  const ilvl = num ? Number(kid(num, "w:ilvl")?.attrs["w:val"] || 0) + 1 : 1;
+  if (num && bold && t.length <= 90) return ilvl;
+  // a plain numbered paragraph is usually a list item ("1. อายุ 18 ปีขึ้นไป"); kept as a
+  // possible heading that sections.js only lets end a section when it names a main part
+  if (num && t.length <= 60) return { level: ilvl, kind: "list" };
+  if (bold && t.length <= 90) return 4; // a bold line with no number: a minor heading
+  return null;
+}
+
+export function docxXmlToOutline(xml, stylesXml) {
+  const styles = styleTable(stylesXml);
+  const doc = parseXml(xml);
+  const body = kid(kid(doc, "w:document") || doc, "w:body");
+  if (!body) return [];
+  const out = [];
+  let line = 0;
+  for (const c of body.children) {
+    if (c.name === "w:p") {
+      const t = paraText(c);
+      if (!t.trim()) continue;
+      const lv = headingLevel(c, t, styles);
+      if (lv != null) {
+        const h = { line, text: t.trim().replace(/\s+/g, " "), level: typeof lv === "object" ? lv.level : lv };
+        if (typeof lv === "object") h.kind = lv.kind;
+        out.push(h);
+      }
+      line += t.split("\n").length;
+    } else if (c.name === "w:tbl") {
+      line += tableToLines(c).reduce((n, l) => n + l.split("\n").length, 0);
+    }
+  }
+  return out;
+}
+
+// Plain text (.md, .txt, text from a PDF): headings are short numbered or "#" lines.
+export function textOutline(text) {
+  const out = [];
+  String(text || "").split("\n").forEach((l, i) => {
+    const t = l.trim();
+    if (!t || t.length > 90 || t.includes(" | ")) return;
+    const md = t.match(/^(#{1,6})\s+\S/);
+    if (md) { out.push({ line: i, text: t.replace(/^#+\s*/, ""), level: md[1].length }); return; }
+    const typed = t.match(TYPED_NUMBER);
+    if (typed && !/[.!?]$/.test(t)) out.push({ line: i, text: t, level: typed[1] ? 1 : typed[2] ? typed[2].split(".").length : 3 });
+  });
+  return out;
+}
+
+// ---------------------------------------------------------------- docx figures and tables
+
+// Pictures and tables in reading order, each with `line` = index (in the text above,
+// split on "\n") of the first text line after it, so the extractor can tell which
+// section it sits in. A table that only frames a picture (a figure with its caption)
+// counts as the picture. Table rows keep one entry per real cell; a cell merged down
+// from the row above is "".
+const PICTURE_TYPES = { png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif", bmp: "image/bmp", webp: "image/webp", svg: "image/svg+xml" };
+
+// Picture ids in reading order. A drawing Word stores twice (mc:AlternateContent: a modern
+// version plus a VML fallback) counts once. Charts and SmartArt are not pictures.
+function blips(el, out = []) {
+  for (const c of el.children || []) {
+    if (c.name === "mc:Fallback") continue;
+    if (c.name === "a:blip" && c.attrs["r:embed"]) out.push(c.attrs["r:embed"]);
+    else if (c.name === "v:imagedata" && c.attrs["r:id"]) out.push(c.attrs["r:id"]);
+    else if (c.name === "c:chart") out.push("#chart");
+    else if (c.name === "dgm:relIds") out.push("#smartart");
+    else if (c.children) blips(c, out);
+  }
+  return out;
+}
+
+function tableRows(tbl) {
+  return kids(tbl, "w:tr").map((tr) => kids(tr, "w:tc").map((tc) => (vMerge(tc) === "continue" ? "" : cellText(tc).trim())));
+}
+
+export function docxXmlToMedia(xml) {
+  const doc = parseXml(xml);
+  const body = kid(kid(doc, "w:document") || doc, "w:body");
+  if (!body) return [];
+  const out = [];
+  let line = 0;
+  for (const c of body.children) {
+    if (c.name === "w:p") {
+      for (const rid of blips(c)) out.push({ kind: "img", rid, line });
+      const t = paraText(c);
+      if (t.trim()) line += t.split("\n").length;
+    } else if (c.name === "w:tbl") {
+      const lines = tableToLines(c);
+      const pics = blips(c);
+      if (pics.length && lines.join(" ").length < 300) pics.forEach((rid) => out.push({ kind: "img", rid, line }));
+      else if (!pics.length) out.push({ kind: "table", rows: tableRows(c), line, lines: lines.reduce((n, l) => n + l.split("\n").length, 0) });
+      line += lines.reduce((n, l) => n + l.split("\n").length, 0);
+    }
+  }
+  return out;
+}
+
+export function bytesToDataUrl(bytes, mime) {
+  let s = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return `data:${mime};base64,${btoa(s)}`;
+}
+
+async function docxMedia(buf, xml) {
+  const items = docxXmlToMedia(xml);
+  if (!items.some((m) => m.kind === "img")) return items;
+  const relsRaw = await unzipEntry(buf, "word/_rels/document.xml.rels");
+  const rels = {};
+  if (relsRaw) {
+    for (const r of parseXml(new TextDecoder().decode(relsRaw)).children.flatMap((x) => x.children || [])) {
+      if (r.name === "Relationship") rels[r.attrs.Id] = r.attrs.Target;
+    }
+  }
+  // what cannot be shown comes back as { kind: "skip", why } so the page can say so
+  const out = [];
+  for (const m of items) {
+    if (m.kind !== "img") { out.push(m); continue; }
+    if (m.rid === "#chart") { out.push({ kind: "skip", line: m.line, why: "กราฟที่สร้างใน Word (Chart)" }); continue; }
+    if (m.rid === "#smartart") { out.push({ kind: "skip", line: m.line, why: "SmartArt" }); continue; }
+    const target = rels[m.rid];
+    const ext = target ? target.split(".").pop().toLowerCase() : "";
+    const mime = PICTURE_TYPES[ext];
+    if (!target) { out.push({ kind: "skip", line: m.line, why: "รูปที่ลิงก์ไปไฟล์ภายนอก" }); continue; }
+    if (!mime) { out.push({ kind: "skip", line: m.line, why: `รูปชนิด .${ext} ที่เบราว์เซอร์แสดงไม่ได้` }); continue; }
+    const bytes = await unzipEntry(buf, target.startsWith("/") ? target.slice(1) : `word/${target}`);
+    if (bytes) out.push({ kind: "img", line: m.line, src: bytesToDataUrl(bytes, mime), name: target.split("/").pop() });
+    else out.push({ kind: "skip", line: m.line, why: "รูปที่ลิงก์ไปไฟล์ภายนอก" });
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------- pdf
@@ -274,21 +464,98 @@ export async function loadText(name, buf) {
   return (await loadDocument(name, buf)).text;
 }
 
-// { text, tables } ; tables only for .docx (grids of { text, shaded })
+// { text, tables, media } ; tables (grids of { text, shaded }) and media (pictures and
+// tables placed by line, see docxXmlToMedia) only for .docx
 export async function loadDocument(name, buf) {
   const ext = name.toLowerCase().split(".").pop();
   if (ext === "docx") {
     const raw = await unzipEntry(buf, "word/document.xml");
     if (!raw) throw new Error("ไม่พบ word/document.xml ในไฟล์ .docx");
     const xml = new TextDecoder().decode(raw);
-    return { text: docxXmlToText(xml), tables: docxXmlToTables(xml) };
+    const styles = await unzipEntry(buf, "word/styles.xml");
+    const outline = docxXmlToOutline(xml, styles ? new TextDecoder().decode(styles) : "");
+    return { text: docxXmlToText(xml), tables: docxXmlToTables(xml), media: await docxMedia(buf, xml), outline };
   }
-  return { text: await loadOther(ext, buf), tables: [] };
+  if (ext === "html" || ext === "htm" || ext === "doc") {
+    const s = new TextDecoder().decode(buf);
+    if (ext !== "doc" || isHtml(s)) return htmlToDocument(s);
+  }
+  const text = await loadOther(ext, buf);
+  return { text, tables: [], media: [], outline: textOutline(text) };
+}
+
+// A web page (.html), or a ".doc" that is really HTML: the Word file the forms' "บันทึก Word
+// (.doc)" button saves is one, and so is a page saved as "Web Page" from Word.
+const isHtml = (s) => /^\s*(?:<!doctype html|<html|<\?xml[^>]*>\s*<html)/i.test(s.slice(0, 2000)) || /<html[\s>]/i.test(s.slice(0, 2000));
+
+const BLOCK = new Set(["ADDRESS", "ARTICLE", "ASIDE", "BLOCKQUOTE", "DD", "DIV", "DL", "DT", "FIGCAPTION", "FIGURE", "FOOTER",
+  "FORM", "H1", "H2", "H3", "H4", "H5", "H6", "HEADER", "HR", "LI", "MAIN", "NAV", "OL", "P", "PRE", "SECTION", "UL", "CAPTION"]);
+const SKIP = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "TEMPLATE", "HEAD", "TITLE", "BUTTON", "SELECT", "OPTION", "SVG"]);
+
+// { text, tables, outline } like a .docx: paragraphs as lines, tables as "a | b" rows plus
+// their grids, <h1>-<h6> and numbered lines as headings. Check boxes of the EC forms
+// (".cb", "on" = ticked) and form inputs are written as "[ / ]" / "[ ]" and their values.
+// Needs the browser's DOMParser.
+export function htmlToDocument(html) {
+  if (typeof DOMParser === "undefined") throw new Error("อ่านไฟล์ HTML ได้เฉพาะในเบราว์เซอร์");
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const lines = [];
+  const tables = [];
+  const heads = [];
+  let buf = "";
+  const flush = () => { const t = buf.replace(/[ \t ]+/g, " ").trim(); if (t) lines.push(t); buf = ""; };
+  const hidden = (el) => el.hasAttribute("hidden") || /display\s*:\s*none/i.test(el.getAttribute("style") || "");
+  const box = (on) => (on ? "[ / ] " : "[ ] ");
+  // text of a cell or inline run, one string (line breaks kept)
+  const inline = (n) => {
+    if (n.nodeType === 3) return n.nodeValue;
+    if (n.nodeType !== 1 || SKIP.has(n.tagName) || hidden(n)) return "";
+    if (n.tagName === "BR") return "\n";
+    if (n.classList.contains("cb") && !n.textContent.trim()) return box(n.classList.contains("on"));
+    if (n.tagName === "INPUT") return n.type === "checkbox" || n.type === "radio" ? box(n.checked) : `${n.value || ""} `;
+    if (n.tagName === "TEXTAREA") return n.value || n.textContent;
+    if (n.tagName === "TABLE") return rowsOf(n).map((r) => r.join(" | ")).join(" ; ");
+    const s = [...n.childNodes].map(inline).join("");
+    return BLOCK.has(n.tagName) ? `\n${s}\n` : s;
+  };
+  const clean = (s) => s.split("\n").map((l) => l.replace(/[ \t ]+/g, " ").trim()).filter(Boolean).join("\n");
+  const rowsOf = (t) => [...t.rows].filter((tr) => tr.closest("table") === t)
+    .map((tr) => [...tr.cells].flatMap((c) => Array(Math.max(1, Number(c.colSpan) || 1)).fill(c)));
+  const walk = (n) => {
+    if (n.nodeType === 3) { buf += n.nodeValue; return; }
+    if (n.nodeType !== 1 || SKIP.has(n.tagName) || hidden(n)) return;
+    if (n.tagName === "TABLE") {
+      flush();
+      const grid = rowsOf(n).map((r) => r.map((c) => ({ text: clean(inline(c)), shaded: /background(?:-color)?\s*:\s*(?!#?f{3,6}\b|white|transparent|none|rgba?\(\s*255,\s*255,\s*255)/i.test(c.getAttribute("style") || "") })));
+      tables.push(grid);
+      for (const r of grid) {
+        const cells = [];
+        for (const c of r) { const t = c.text.replace(/\n+/g, " "); if (t && cells[cells.length - 1] !== t) cells.push(t); }
+        if (cells.length) lines.push(cells.join(" | "));
+      }
+      return;
+    }
+    if (n.tagName === "BR") { flush(); return; }
+    if (n.tagName !== "TD" && n.tagName !== "TH" && (n.classList.contains("cb") || n.tagName === "INPUT" || n.tagName === "TEXTAREA")) { buf += inline(n); return; }
+    const block = BLOCK.has(n.tagName);
+    if (block) flush();
+    const h = /^H([1-6])$/.exec(n.tagName);
+    if (h) { const t = clean(n.textContent).replace(/\n/g, " "); if (t) heads.push({ line: lines.length, text: t, level: Number(h[1]) }); }
+    for (const c of n.childNodes) walk(c);
+    if (block) flush();
+  };
+  walk(doc.body || doc.documentElement);
+  flush();
+  const text = lines.join("\n");
+  // <h1>-<h6>, and numbered lines ("8. ประโยชน์...") the way plain text is read
+  const seen = new Set(heads.map((x) => x.line));
+  const outline = [...heads, ...textOutline(text).filter((x) => !seen.has(x.line))].sort((a, b) => a.line - b.line);
+  return { text, tables, media: [], outline };
 }
 
 async function loadOther(ext, buf) {
   if (ext === "txt" || ext === "md" || ext === "markdown") return new TextDecoder().decode(buf);
   if (ext === "pdf") return pdfToText(buf);
   if (ext === "doc") throw new Error("ไฟล์ .doc รุ่นเก่ายังไม่รองรับ กรุณา Save As เป็น .docx");
-  throw new Error(`ไม่รองรับไฟล์ .${ext} (ใช้ .docx, .pdf, .md หรือ .txt)`);
+  throw new Error(`ไม่รองรับไฟล์ .${ext} (ใช้ .docx, .pdf, .html, .md, .txt หรือไฟล์งาน .json)`);
 }

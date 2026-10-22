@@ -46,9 +46,24 @@ export function wordHtml(doc) {
   clone.querySelectorAll(".unknown").forEach((u) => u.style.removeProperty("background-color"));
   clone.querySelectorAll(".hint").forEach((h) => h.remove());               // blue EC guidance, not printed
   clone.querySelectorAll("[contenteditable]").forEach((e) => e.removeAttribute("contenteditable"));
+  clone.querySelectorAll("[data-goto]").forEach((e) => { e.removeAttribute("data-goto"); e.removeAttribute("title"); });
   // legacy table attrs Word + LibreOffice both honour
   clone.querySelectorAll("table").forEach((t) => {
     t.setAttribute("border", "1"); t.setAttribute("cellspacing", "0"); t.setAttribute("cellpadding", "2");
+  });
+  // pictures: Word sizes them by the width/height attributes, so give it the size on screen
+  const liveImgs = [...liveSheet.querySelectorAll("img")];
+  clone.querySelectorAll("img").forEach((im, i) => {
+    const r = liveImgs[i]?.getBoundingClientRect();
+    if (r?.width) { im.setAttribute("width", String(Math.round(r.width))); im.setAttribute("height", String(Math.round(r.height))); }
+  });
+  // a <p> may not hold a table or a picture block in Word: make those paragraphs <div>s
+  clone.querySelectorAll("p").forEach((p) => {
+    if (!p.querySelector("table, .fig")) return;
+    const d = doc.createElement("div");
+    for (const a of p.attributes) d.setAttribute(a.name, a.value);
+    d.innerHTML = p.innerHTML;
+    p.replaceWith(d);
   });
   // Word maps <h1>..<h6> to its big built-in Heading styles; swap to <div> so the form's
   // own (already-frozen inline) sizes stand instead.
@@ -65,10 +80,40 @@ export function wordHtml(doc) {
     + `table{border-collapse:collapse;}</style></head><body>${clone.outerHTML}</body></html>`;
 }
 
+// Word does not show <img src="data:...">. When the form has pictures, the .doc is an
+// MHTML "single file web page" instead: the HTML plus each picture as its own MIME part,
+// which Word opens with the pictures in place.
+const B64 = (s) => {
+  const u8 = new TextEncoder().encode(s);
+  let bin = "";
+  for (let i = 0; i < u8.length; i += 0x8000) bin += String.fromCharCode(...u8.subarray(i, i + 0x8000));
+  return btoa(bin);
+};
+const wrap76 = (s) => s.replace(/.{1,76}/g, "$&\r\n");
+
+export function wordDoc(doc) {
+  let html = wordHtml(doc);
+  const pics = [];
+  html = html.replace(/src="data:(image\/[\w.+-]+);base64,([^"]+)"/g, (_, mime, data) => {
+    const name = `image${String(pics.length + 1).padStart(3, "0")}.${mime.split("/")[1].replace("jpeg", "jpg").replace("svg+xml", "svg")}`;
+    pics.push({ name, mime, data });
+    return `src="ec_files/${name}"`;
+  });
+  if (!pics.length) return html;
+  const bound = "----=_NextPart_ECMFU";
+  const base = "file:///C:/ec/form.htm";
+  let out = `MIME-Version: 1.0\r\nContent-Type: multipart/related; boundary="${bound}"; type="text/html"\r\n\r\n`;
+  out += `--${bound}\r\nContent-Location: ${base}\r\nContent-Transfer-Encoding: base64\r\nContent-Type: text/html; charset="utf-8"\r\n\r\n${wrap76(B64(html))}\r\n`;
+  for (const p of pics) {
+    out += `--${bound}\r\nContent-Location: file:///C:/ec/ec_files/${p.name}\r\nContent-Transfer-Encoding: base64\r\nContent-Type: ${p.mime}\r\n\r\n${wrap76(p.data)}\r\n`;
+  }
+  return `${out}--${bound}--\r\n`;
+}
+
 // Build the .doc and hand it to the browser as a download.
 export function downloadDoc(doc, code) {
-  const html = wordHtml(doc);
-  const blob = new Blob(["﻿", html], { type: "application/msword" });
+  const html = wordDoc(doc);
+  const blob = new Blob(html.startsWith("MIME-Version") ? [html] : ["﻿", html], { type: "application/msword" });
   const url = URL.createObjectURL(blob);
   const a = doc.createElement("a");
   a.href = url; a.download = `${code || "form"}.doc`;

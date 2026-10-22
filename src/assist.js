@@ -64,6 +64,7 @@ export function buildPrompt(submission, source, picked) {
     "4. ช่องอื่นเขียนแบบเอกสารวิชาการ กระชับ ภาษาไทยเป็นหลัก",
     "5. ช่อง true/false ของแบบคัดกรอง AP 01_1 ตอบตามสิ่งที่โครงการนี้ทำกับผู้เข้าร่วมจริง ไม่ใช่สิ่งที่อ้างถึงในงานวิจัยอื่น",
     "6. ห้ามใช้อีโมจิ สัญลักษณ์รูปภาพ และเครื่องหมายจุดกลาง",
+    "7. ถ้าค่าเดิมของช่องมีบรรทัด [[รูป 1]] หรือ [[ตาราง 1]] (ตำแหน่งรูปหรือตารางบนแบบฟอร์ม) ให้คงบรรทัดนั้นไว้ตามเดิมในคำตอบ วางไว้ใกล้ข้อความที่อ้างถึง",
     "",
     "รูปแบบคำตอบ: ตอบเป็น JSON object เดียวเท่านั้น ไม่มีข้อความอื่นนอก JSON โดย key คือชื่อช่องตามรายการ (เช่น \"layman.plain_summary\") และ value ตามชนิดที่ระบุ ช่องที่ไม่ตอบให้ใส่ null หรือละไว้",
     "เพิ่ม key \"_notes\" เป็น array ของข้อความ บอกสิ่งที่นักวิจัยต้องตรวจหรือตัดสินใจเอง (ถ้ามี)",
@@ -155,6 +156,12 @@ export function applyResponse(submission, picked, answer) {
     if (!f) { skipped.push({ path: key, why: "ไม่ได้ขอช่องนี้" }); continue; }
     const r = coerce(f, v);
     if ("value" in r) {
+      // a picture or table marker Claude dropped goes back at the end, so the item is not lost
+      if (f.type === "area") {
+        const old = String(get(submission, f.path) || "");
+        const lost = [...old.matchAll(/\[\[(?:รูป|ตาราง) \d+\]\]/g)].map((m) => m[0]).filter((mk) => !r.value.includes(mk));
+        if (lost.length) r.value = [r.value, ...lost].join("\n");
+      }
       set(submission, f.path, r.value);
       applied.push(f.path);
     } else if (r.skip !== "null") skipped.push({ path: key, why: r.skip });

@@ -109,6 +109,10 @@ table.f td > .gap:only-child { height: 1.2em; }
   .gap, .unknown { background: var(--tbd); }
   .unknown { outline: 1px dashed var(--tbd-line); outline-offset: -1px; }
   [contenteditable="true"]:focus { outline: 2px solid var(--accent); }
+  /* opened from the main page: a gap is a link back to its input there */
+  .linked .sheet [data-goto] { cursor: pointer; }
+  .linked .sheet [data-goto]:hover { background: #ffd54a; outline: 2px solid var(--tbd-line); outline-offset: -1px; }
+  #stat.done { color: #1b7a3a; font-weight: 600; }
 }
 
 /* EC guidance text (blue on the official form): screen only, the form says to delete it before submitting */
@@ -116,6 +120,13 @@ table.f td > .gap:only-child { height: 1.2em; }
 .blk.gap { height: 2.4em; }
 .para { text-indent: 10mm; margin: 0 0 1mm; }
 .para .v.multi { display: block; text-indent: 0; }
+/* pictures and tables placed in a long text field ([[รูป n]] / [[ตาราง n]], src/media.js) */
+.v.rich .fig { display: block; text-align: center; margin: 2mm 0; break-inside: avoid; }
+.v.rich .fig img { max-width: 100%; max-height: 220mm; }
+.v.rich table.mt { width: 100%; border-collapse: collapse; margin: 2mm 0; white-space: normal; text-indent: 0; font-size: 14pt; }
+.v.rich table.mt td { border: 1px solid #000; padding: 0.5mm 1.5mm; vertical-align: top; }
+.v.rich table.mt td.hs { font-weight: 700; text-align: center; }
+.v.rich table.mt tr { break-inside: avoid; }
 h2.sec { font-size: 16pt; font-weight: 700; margin: 3mm 0 1mm; break-after: avoid; }
 .hint.inl { display: inline; border: 0; padding: 0; }
 @media print { .hint, .hint.inl { display: none; } }

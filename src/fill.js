@@ -7,9 +7,11 @@
 //   data-yn="a.b" data-v="1|0"   yes/no pair; null or missing -> row flagged "unknown"
 //   data-if="a.b"          keep the element only when truthy
 //   data-each="list" data-min="3"   on <tbody>; repeats its <template> row, paths inside start with "."
-// Every filled value is contenteditable on screen so the last wording fixes happen in place.
+// The form is read-only: everything is typed on the main page (index.html). A gap or an
+// unanswered row is highlighted on screen and links back to its input there.
 
-import { downloadDoc, wordHtml } from "./word-export.js";
+import { downloadDoc, wordDoc } from "./word-export.js";
+import { renderRich, loadMedia } from "./media.js";
 
 const TH_MONTHS = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
   "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
@@ -123,6 +125,7 @@ function fillScope(root, data, scope = "") {
     if (v === "") {
       el.textContent = "";
       el.classList.add("gap");
+      el.dataset.goto = scopePath(el.dataset.f, scope);
     } else {
       el.textContent = v;
       if (el.dataset.fmt === "email" && v.includes("@")) {
@@ -131,8 +134,11 @@ function fillScope(root, data, scope = "") {
         el.replaceChildren(v.slice(0, at), document.createElement("wbr"), v.slice(at));
       }
       if (v.includes("\n")) el.classList.add("multi");
+      if (data.media && v.includes("[[")) {
+        renderRich(el, v, data.media);
+        if (el.querySelector(".fig, table")) el.classList.add("multi", "rich");
+      }
     }
-    el.setAttribute("contenteditable", "true");
   });
   root.querySelectorAll("[data-c]").forEach((el) => {
     if (!fresh(el)) return;
@@ -145,7 +151,12 @@ function fillScope(root, data, scope = "") {
     // sub-question under a parent answered "no": leave both boxes empty, not a gap
     if (el.dataset.under && test(data, scopePath(el.dataset.under, scope)) === false) return;
     const t = test(data, scopePath(el.dataset.yn, scope));
-    if (t === null) { (el.closest("tr") || el).classList.add("unknown"); return; }
+    if (t === null) {
+      const row = el.closest("tr") || el;
+      row.classList.add("unknown");
+      row.dataset.goto = scopePath(el.dataset.yn, scope);
+      return;
+    }
     if ((el.dataset.v === "1") === t) el.classList.add("on");
   });
 }
@@ -214,7 +225,6 @@ export function fillForm(doc, data) {
           el.dataset.done = "1";
           if (!el.dataset.f) el.classList.add("cb");
           else if (el.dataset.ph) el.textContent = el.dataset.ph;
-          el.setAttribute("contenteditable", "true");
         });
       }
       tb.appendChild(row);
@@ -243,15 +253,34 @@ export function report(doc) {
 // Page bootstrap: ?data=../fixtures/x.json, else a file picker in the toolbar.
 export async function boot() {
   const stat = document.getElementById("stat");
+  const local = new URLSearchParams(location.search).get("data") === "local";
   const show = (r) => {
-    stat.textContent = `ช่องที่ยังว่าง ${r.gaps} ช่อง, ข้อที่ยังไม่มีคำตอบ ${r.unknown} ข้อ (แถบเหลือง ไม่พิมพ์ออก)`;
+    stat.textContent = r.gaps || r.unknown
+      ? `ยังไม่ครบ: ช่องว่าง ${r.gaps} ช่อง, ข้อที่ยังไม่ตอบ ${r.unknown} ข้อ (แถบเหลือง ไม่พิมพ์ออก)${local ? " คลิกแถบเหลืองเพื่อกลับไปกรอกที่หน้าหลัก แบบฟอร์มนี้จะอัปเดตเอง" : ""}`
+      : "ข้อมูลครบแล้ว พิมพ์ได้";
+    stat.classList.toggle("done", !r.gaps && !r.unknown);
   };
   const fresh = document.getElementById("form-src").content;
   const mount = (data) => {
     const sheet = document.querySelector(".sheet");
+    const y = window.scrollY;
     sheet.replaceChildren(fresh.cloneNode(true));
     show(fillForm(document, data));
+    if (local) sheet.querySelectorAll("[data-goto]").forEach((g) => { g.title = "คลิกเพื่อกลับไปกรอกที่หน้าหลัก"; });
+    window.scrollTo(0, y);
   };
+  // a highlighted gap opens its input on the main page (the tab named "ecmfu-main")
+  if (local) {
+    document.querySelector(".sheet").addEventListener("click", (e) => {
+      const g = e.target.closest("[data-goto]");
+      if (!g) return;
+      // same address as the open main page (only the hash changes, so it does not reload)
+      let base = new URL("../index.html", location.href).href;
+      try { if (window.opener && !window.opener.closed) base = window.opener.location.href.split("#")[0]; } catch { /* other origin */ }
+      window.open(`${base}#goto=${encodeURIComponent(g.dataset.goto)}`, "ecmfu-main");
+    });
+    document.body.classList.add("linked");
+  }
   const picker = document.getElementById("json-file");
   picker.addEventListener("change", async () => {
     const f = picker.files[0];
@@ -261,14 +290,27 @@ export async function boot() {
   // same Word-export the Code pipeline uses; derive the file name from the form page
   const code = (location.pathname.split("/").pop() || "form").replace(/\.html$/, "");
   document.getElementById("savedoc")?.addEventListener("click", () => downloadDoc(document, code));
-  window.ecWordHtml = () => wordHtml(document);
+  window.ecWordHtml = () => wordDoc(document);
   const src = new URLSearchParams(location.search).get("data");
   if (src === "local") {
     // the project open in the main page (index.html), kept in this browser only
-    let saved = null;
-    try { saved = JSON.parse(localStorage.getItem("ecmfu.current") || "null"); } catch { /* blocked */ }
-    if (saved?.submission) mount(saved.submission);
-    else stat.textContent = "ยังไม่มีโครงการในหน้าหลัก เปิดหน้าหลักแล้วอัปโหลดข้อเสนอก่อน หรือเลือกไฟล์ JSON";
+    const load = async () => {
+      let saved = null;
+      try { saved = JSON.parse(localStorage.getItem("ecmfu.current") || "null"); } catch { /* blocked */ }
+      if (saved?.submission) {
+        // pictures and tables are kept in IndexedDB (too big for localStorage), see media.js
+        if (!saved.submission.media) saved.submission.media = await loadMedia();
+        mount(saved.submission);
+      } else stat.textContent = "ยังไม่มีโครงการในหน้าหลัก เปิดหน้าหลักแล้วอัปโหลดข้อเสนอก่อน หรือเลือกไฟล์ JSON";
+    };
+    await load();
+    // redraw when the main page saves a change (media lands in IndexedDB just after)
+    let t = null;
+    window.addEventListener("storage", (e) => {
+      if (e.key !== "ecmfu.current") return;
+      clearTimeout(t);
+      t = setTimeout(load, 400);
+    });
     return;
   }
   if (src) {

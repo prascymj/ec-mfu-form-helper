@@ -8,6 +8,10 @@
 // spaces are the reader's phrase breaks, so they are kept here.
 
 import { DEFAULTS } from "./schema-defaults.js";
+import { fillFromOutline } from "./sections.js";
+import { readEcForm, stripFormText, PAGE_MARK } from "./ec-form-reader.js";
+import { FORM_LABELS } from "./form-labels.js";
+import { textOutline } from "./loaders.js";
 import {
   search, match, sub, split, rx, strip, lstrip, splitlines, pyInt, pyFloat, reEscapeDot,
 } from "./pyre.js";
@@ -222,7 +226,13 @@ function classificationScanText(scopeText) {
 
 // ---------------------------------------------------------------- people
 
+// A filled EC form prints every option with a box ("[ / ] อาจารย์", "[ ] นักศึกษา ปริญญาเอก"):
+// only the ticked options (and the line after each, where an option wraps) count.
+const BOXED = /\[\s*\/?\s*\]/;
+const tickedOnly = (t) => (BOXED.test(t) ? (t.match(/\[\s*\/\s*\][^[\n]*(?:\n(?!\s*\[)[^[\n]*)?/g) || []).join("\n") : t);
+
 function personStatus(blob) {
+  blob = tickedOnly(blob);
   if (has(blob, "ปริญญาเอก", String.raw`ป\.\s*เอก`, "doctoral", String.raw`ph\.?\s*d`)) return "doctoral";
   if (has(blob, "ปริญญาโท", String.raw`ป\.\s*โท`, "master")) return "master";
   if (has(blob, "ปริญญาตรี", String.raw`ป\.\s*ตรี`, "undergrad", "bachelor")) return "bachelor";
@@ -353,6 +363,48 @@ function rosterFromTable(text) {
   return out.pi ? out : null;
 }
 
+// The same team table read from a PDF, where each row breaks over several lines with no
+// cell separator and a page number may fall in between:
+//   อ.ดร. ก ข สำนักวิชาเทคโนโลยี / ดิจิทัลประยุกต์ / หัวหน้าโครงการ 85%
+//   ดร. ก ข / หน่วยงาน : มหาวิทยาลัยแม่ฟ้าหลวง สำนัก... / หัวหน้าโครงการ 85.00 นักวิจัยใหม่  (NRIIS)
+// A row ends at its role line; the person starts at the last line with a title (อ. ดร. นาย ...).
+const PERSON_TITLE = String.raw`^(?:(?:ศ|รศ|ผศ|อ|ดร|นพ|พญ|ทพ|ภก|ภญ|พ\.?ต\.?[ทอต])\.|ศาสตราจารย์|รองศาสตราจารย์|ผู้ช่วยศาสตราจารย์|อาจารย์|นางสาว|นาง|นาย|น\.ส\.|(?:Dr|Mr|Mrs|Ms|Prof|Asst|Assoc)\.?\s)`;
+const ROLE_LINE = String.raw`^(หัวหน้าโครงการ(?:วิจัย)?|ผู้วิจัยหลัก|ผู้ร่วมวิจัย|ผู้วิจัยร่วม|ผู้ร่วมโครงการ(?:วิจัย)?|นักวิจัยร่วม|อาจารย์ที่ปรึกษา|ที่ปรึกษาโครงการ(?:วิจัย)?|ที่ปรึกษา|ผู้ประสานงาน(?:โครงการ)?|Principal Investigator|Co-?Investigators?|(?:Research )?Advisor|(?:Research )?Coordinator)(?=\s|$)`;
+
+function rosterFromLines(text) {
+  const lines = splitlines(text).map((l) => strip(l));
+  const head = lines.findIndex((l) => search("ชื่อ\\s*-?\\s*สกุล|ชื่อ-นามสกุล|^Name", l, "i") && search("ตำแหน่ง|หน่วยงาน|Role|Position", l, "i"));
+  if (head < 0) return null;
+  const out = { pi: null, co: [], advisor: [], coordinator: null };
+  let buf = [];
+  for (const line of lines.slice(head + 1, head + 80)) {
+    if (!line || /^\d{1,3}$/.test(line)) continue; // blank, or a page number
+    if (search(String.raw`^(?:ส่วนที่|\d{1,2}\.\s|บทสรุป|ลงชื่อ)`, line) && !buf.length) break;
+    const rm = search(ROLE_LINE, line, "i");
+    if (!rm) { buf.push(line); continue; }
+    const start = buf.map((l) => Boolean(search(PERSON_TITLE, l, "i"))).lastIndexOf(true);
+    const blob = (start >= 0 ? buf.slice(start) : buf.slice(-2)).join(" ").replace(/\s+/g, " ");
+    buf = [];
+    const role = Object.entries(ROLE).find(([, re]) => search(re, rm[1], "i"))?.[0];
+    if (!role || !blob) continue;
+    // the affiliation begins at "หน่วยงาน :" or at the first school / faculty word
+    const am = search(String.raw`หน่วยงาน\s*[:：]\s*|(?=${SCHOOL_START})`, blob);
+    const name = strip(am ? blob.slice(0, am.index) : blob);
+    let affiliation = am ? strip(blob.slice(am.end)) : "";
+    // NRIIS writes "มหาวิทยาลัยแม่ฟ้าหลวง สำนักวิชา..."; the forms want the school
+    const school = search(SCHOOL_START, affiliation);
+    if (school && school.index > 0) affiliation = strip(affiliation.slice(school.index));
+    affiliation = affiliation.replace(/(?<=[ก-๙])\s+(?=[ก-๙])/g, ""); // a school name broken over two lines
+    if (!name || name.length > 60) continue;
+    const p = newPerson({ title_th: search("[ก-๙]", name) ? name : "", name_en: search("[ก-๙]", name) ? "" : name, status: personStatus(name), affiliation });
+    if (role === "pi") out.pi = out.pi || p;
+    else if (role === "coordinator") out.coordinator = out.coordinator || p;
+    else out[role].push(p);
+  }
+  return out.pi ? out : null;
+}
+const SCHOOL_START = String.raw`สำนักวิชา|คณะ|ภาควิชา|สาขาวิชา|School of|Faculty of|Department of`;
+
 // ---------------------------------------------------------------- fields
 
 // Grant-type options under the RS-1 heading: tab-separated cells on the lines before the
@@ -382,11 +434,17 @@ function funding(text) {
   const blk = block(text, ["Funding", "แหล่งทุน", "^ทุน", "งบประมาณ"],
     ["Field", "Background", "Rationale", "Objectives", "สาขา", "หลักการ", "ความสำคัญ", "วัตถุประสงค์"]);
   const scope = blk || text;
+  // on a filled EC form only the ticked kind of grant counts
+  const boxed = BOXED.test(scope);
+  const kind = tickedOnly(scope);
   let ftype = "personal";
-  if (has(scope, "university", "มหาวิทยาลัย", "สำนักวิชา", String.raw`internal (?:research )?grant`, "คณะ")) ftype = "university";
-  if (has(scope, "government", "รัฐบาล", "ภาครัฐ", String.raw`วช\.?`, "สกสว", "บพข", "สวรส")) ftype = "government";
-  if (has(scope, "private", "company", "บริษัท", "เอกชน")) ftype = "private";
-  if (has(scope, "self[- ]?funded", "personal", "ทุนส่วนตัว", "ไม่มีทุน", "no funding")) ftype = "personal";
+  if (has(kind, "university", "มหาวิทยาลัย", "สำนักวิชา", String.raw`internal (?:research )?grant`, "คณะ")) ftype = "university";
+  if (has(kind, "government", "รัฐบาล", "ภาครัฐ", String.raw`วช\.?`, "สกสว", "บพข", "สวรส")) ftype = "government";
+  if (has(kind, "private", "company", "บริษัท", "เอกชน")) ftype = "private";
+  if (has(kind, "self[- ]?funded", "personal", "ทุนส่วนตัว", "ไม่มีทุน", "no funding")) ftype = "personal";
+  // AP 02 has no box for the university's own grant: "[ / ] ทุนจากหน่วยงานของรัฐบาล ระบุ
+  // งานวิจัยของมหาวิทยาลัยแม่ฟ้าหลวง" is the MFU grant (fee C, not A)
+  if (boxed && ftype === "government" && has(kind, "แม่ฟ้าหลวง", String.raw`\bMFU\b`)) ftype = "university";
 
   let amount = null;
   const am = search(AMOUNT, scope, "i");
@@ -521,7 +579,7 @@ export function buildLocalSubmission(text) {
   const sigIdx = text.indexOf("ลงชื่อ");
   const rosterText = sigIdx !== -1 ? text.slice(0, sigIdx) : text;
 
-  const table = rosterFromTable(rosterText);
+  const table = rosterFromTable(rosterText) || rosterFromLines(rosterText);
   let piBlob = "";
   let pi;
   let coInvestigators;
@@ -871,7 +929,7 @@ export function planFromTables(tables) {
     for (const row of t.slice(h + 1)) {
       const task = strip(sub(String.raw`^\d{1,2}[.)]\s*`, "", row[taskCol]?.text || ""));
       if (!task) continue;
-      const m = monthCols.map((i) => Boolean(row[i] && (row[i].text || row[i].shaded)));
+      const m = monthCols.map((i) => Boolean(row[i] && ((row[i].text && !/^\[ \]$/.test(row[i].text)) || row[i].shaded)));
       if (!m.some(Boolean)) continue;
       rows.push({ task: task.replace(/\s+/g, " "), m, owner: ownerCol >= 0 ? strip(row[ownerCol]?.text || "") : "" });
     }
@@ -880,12 +938,487 @@ export function planFromTables(tables) {
   return [];
 }
 
-// Full pipeline used by the page. `tables` (from loadDocument) is optional.
-export function extractSubmission(text, tables = []) {
+// Literature review (AP 02 ข้อ 9) and references (AP 02 ข้อ 18); the Python tool has
+// neither. A review runs over several paragraphs with its own sub-headings ("8.1 ..."),
+// so it is read from its heading to the next major heading, keeping paragraph breaks.
+const LIT_START = String.raw`^(?:การทบทวนวรรณกรรม|ทบทวนวรรณกรรม|การรวบรวมรายงานที่เกี่ยวข้อง|แนวคิด\s*(?:,\s*)?ทฤษฎี|ทฤษฎี(?:และ|\s)*(?:เอกสาร|งานวิจัย)ที่เกี่ยวข้อง|เอกสารและงานวิจัยที่เกี่ยวข้อง|ทบทวนเอกสาร|ผลงานวิจัย(?:ต่าง\s*ๆ)?\s*ที่เกี่ยวข้อง|งานวิจัยที่เกี่ยวข้อง|(?:review of\s+)?(?:related\s+)?literature(?:\s+review)?|related (?:work|studies))`;
+const REF_START = String.raw`^(?:เอกสารอ้างอิง|บรรณานุกรม|รายการอ้างอิง|references?|bibliography)`;
+const AFTER_LIT = String.raw`^(?:เอกสารอ้างอิง|บรรณานุกรม|รายการอ้างอิง|references?\b|bibliography|กระบวนการและวิธีการ|วิธีการดำเนิน|ระเบียบวิธี|ขอบเขต|กรอบแนวคิด|กรอบการวิจัย|สมมติฐาน|รูปแบบการวิจัย|ประชากร|study design|methods?\b|methodology|procedures?\b)`;
+const AFTER_REF = String.raw`^(?:กระบวนการและวิธีการ|วิธีการดำเนิน|ระเบียบวิธี|แผนการดำเนิน|ขอบเขต|งบประมาณ|ภาคผนวก|ประวัติ|ระยะเวลา|appendix|methods?\b|methodology|procedures?\b|budget)`;
+// numbering in front of a heading: "8.", "8.1", "ก.", "บทที่ 2", "Chapter 2"
+const HEAD_LEAD = String.raw`^[\s\-•*#>]*(?:(?:บทที่|chapter)\s*\d{1,2}\.?\s*[:：]?\s*|\d{1,2}(?:\.\d{1,2})*\.?\s+|[ก-ฮ]\.\s+)?`;
+const headText = (line) => strip(sub(HEAD_LEAD, "", line));
+const shortLine = (line) => strip(line).length <= 90;
+
+// The section under the first heading matching startRe: { start, end, lines: [{ i, t }] }
+// with `i` the line index in `text` and `end` the index of the heading that closes it.
+function sectionSpan(text, startRe, stopRe, maxLines = 300) {
+  const lines = splitlines(text);
+  for (let i = 0; i < lines.length; i++) {
+    const h = headText(lines[i]);
+    const m = search(startRe, h, "i");
+    if (!m || !shortLine(lines[i])) continue;
+    const out = [];
+    const tail = strip(lstrip(h.slice(m.end), " :：-"));
+    // "การทบทวนวรรณกรรม ผลงานวิจัยต่างๆ ที่เกี่ยวข้อง", "เอกสารอ้างอิงของโครงการ ระบุตาม..."
+    // are still the heading, not content
+    // Only text after "หัวข้อ:" or a long run-on is content; a short tail ("วิจัยและวิธีการ
+    // ดำเนินการ" after "ระเบียบวิธี") is the rest of the heading.
+    const inlineValue = search(String.raw`^\s*[:：]`, h.slice(m.end)) || tail.length > 90;
+    if (tail && inlineValue && !search(LIT_START, tail, "i") && !search(String.raw`^(?:ของ|ที่|ระบุ|/|\(|สารสนเทศ)`, tail)) out.push({ i, t: tail });
+    let j = i + 1;
+    let parent = null; // "8" once a sub-heading "8.1" is seen: later "8.x" lines belong here
+    for (; j < lines.length && out.length < maxLines; j++) {
+      const raw = lines[j];
+      if (!strip(raw)) continue;
+      const sub2 = match(String.raw`^\s*(\d{1,2})\.\d{1,2}`, raw);
+      if (sub2 && parent === null) parent = sub2[1];
+      // a sub-heading of this section ("8.3 การวิเคราะห์ข้อมูล..." inside ข้อ 8) never ends it
+      const ownSub = sub2 && sub2[1] === parent;
+      if (!ownSub && shortLine(raw) && search(stopRe, headText(raw), "i")) break;
+      out.push({ i: j, t: strip(sub(String.raw`^[\s\-•*>]+`, "", raw)) });
+    }
+    if (out.length) return { start: i, end: j, lines: out };
+  }
+  return null;
+}
+
+const sectionLines = (text, startRe, stopRe) => (sectionSpan(text, startRe, stopRe)?.lines || []).map((l) => l.t);
+
+export function literatureReview(text) {
+  return sectionLines(text || "", LIT_START, AFTER_LIT).join("\n");
+}
+
+// ---------------------------------------------------------------- pictures and tables
+
+// Fields of the forms that may hold pictures and tables, with the proposal headings they
+// come from. A picture or table found under one of these headings in the .docx is put into
+// that field, at its place in the text as a marker line "[[รูป 1]]" / "[[ตาราง 1]]";
+// the form draws the item where its marker is.
+export const MEDIA_MARK = /\[\[(รูป|ตาราง) (\d+)\]\]/g;
+const OTHER_MAJOR = String.raw`เอกสารอ้างอิง|บรรณานุกรม|รายการอ้างอิง|references?\b|bibliography|แผนการดำเนิน|แผนการใช้จ่าย|งบประมาณ|ระยะเวลา|ผลผลิต|ผลลัพธ์|ผลกระทบ|ประโยชน์ที่|ข้อพิจารณาด้านจริยธรรม|ภาคผนวก|ประวัติ|วัตถุประสงค์|หลักการและเหตุผล|ความสำคัญของ|กลุ่มเป้าหมาย|ส่วนที่\s*\d|บทสรุป|คำถาม(?:การ)?วิจัย|ระดับความพร้อม|มาตรฐานการวิจัย|หน่วยงานร่วม|พื้นที่ที่ได้รับประโยชน์`;
+const MEDIA_TARGETS = [
+  { path: "methodology.literature_review", start: LIT_START.slice(1) },
+  { path: "methodology.study_design", start: String.raw`(?:รูปแบบการวิจัย|การออกแบบการวิจัย|กรอบแนว(?:ความ)?คิด|กรอบการวิจัย|study design|research design|conceptual framework)` },
+  { path: "methodology.procedures", start: String.raw`(?:กระบวนการและวิธีการ|วิธีการดำเนิน|ระเบียบวิธี|ขั้นตอนการวิจัย|แนวทางการดำเนินงาน|methods?\b|methodology|procedures?\b)` },
+  // not a bare "คำจำกัดความ": grant forms use it for their own output-type tables
+  { path: "methodology.operational_definitions", start: String.raw`(?:คำจำกัดความ(?:ที่ใช้ใน|เชิงปฏิบัติการ|ศัพท์)|นิยามศัพท์|นิยามเชิงปฏิบัติการ|operational definitions?)` },
+  { path: "methodology.statistical_analysis", start: String.raw`(?:การวิเคราะห์(?:ข้อมูล|ผล|ทางสถิติ)|สถิติที่ใช้|statistical analysis|data analysis)` },
+];
+
+// Spans of the target headings inside text lines [from, to), as line indexes of the whole text.
+function targetSpans(lines, from, to) {
+  const part = lines.slice(from, to).join("\n");
+  return MEDIA_TARGETS.map((t) => {
+    const others = MEDIA_TARGETS.filter((o) => o !== t && !(t.through || []).includes(o.path)).map((o) => o.start).join("|");
+    const sp = sectionSpan(part, `^${t.start}`, `^(?:${others}|${OTHER_MAJOR})`);
+    return sp && { path: t.path, span: { start: sp.start + from, end: sp.end + from, lines: sp.lines.map((l) => ({ i: l.i + from, t: l.t })) } };
+  }).filter(Boolean);
+}
+
+// A reference-list entry: "Cheng, B., ... (2016). Title" (APA) or "Doe J. Title. 2021;5:6" (Vancouver).
+const CITATION = String.raw`^(?:\[\d{1,3}\]\s*|\d{1,3}[.)]\s*)?(?:[A-ZÀ-ɏ][\wÀ-ɏ'’\-]+(?:\s[\wÀ-ɏ'’\-]+){0,3},?\s[A-Z]|[ก-๙]+\s[ก-๙]+[.,]?\s).*?(?:\(\d{4}[a-z]?[,)]|[,.]\s*\d{4}[a-z]?[.;,]|\.\s*\d{4};)`;
+// also a Latin-script line with a year, e.g. "de León-Solis, C., ... 2023. Metabolomics ..."
+const isCitation = (l) => Boolean(search(CITATION, l)) || (!search("[ก-๙]", l) && l.length > 30 && Boolean(search(String.raw`\b(?:19|20)\d{2}[a-z]?\b`, l)));
+
+// Long sections (AP 02 ข้อ 9, 10, 12.1.1, 12.3, 13): the whole text under the proposal's
+// heading, sub-headings included, with each picture or table of the .docx as a marker
+// line "[[รูป 1]]" / "[[ตาราง 1]]" where it stood; the form draws the item there.
+// The rules above stop at the first sub-heading, so the longer text wins. A run of
+// reference entries closing the review (forms without a "เอกสารอ้างอิง" heading) goes to ข้อ 18.
+// `media` items may carry `seg: [from, to)`, the lines of the file they came from when
+// several files were joined; headings are then looked up in that file only.
+export function fillSections(s, text, media = []) {
+  const skipped = media.filter((m) => m.kind === "skip");
+  // on a filled EC form the tables are the form's own layout, not content
+  media = media.filter((m) => m.kind !== "skip" && !(s._locked && m.kind === "table"));
+  // for the page: what the file held and what could be used (not stored with the project)
+  const report = { pictures: media.filter((m) => m.kind === "img").length + skipped.length, tables: media.filter((m) => m.kind === "table").length,
+    placedPictures: 0, placedTables: 0, unusable: skipped.map((m) => m.why) };
+  Object.defineProperty(s, "_mediaReport", { value: report, enumerable: false, configurable: true });
+  const lines = splitlines(text);
+  const segKey = (m) => (m.seg ? m.seg.join(":") : "all");
+  const spansBySeg = { all: targetSpans(lines, 0, lines.length) };
+  for (const m of media) {
+    const k = segKey(m);
+    if (!spansBySeg[k]) spansBySeg[k] = targetSpans(lines, m.seg[0], m.seg[1]);
+  }
+  const counts = { img: 0, table: 0 };
+  const placed = {}; // path -> [{ line, id, skip: [from, to), span }]
+  if (media.length) s.media = { ...(s.media || {}) };
+  for (const m of [...media].sort((a, b) => a.line - b.line)) {
+    const home = spansBySeg[segKey(m)].filter((x) => x.span.start < m.line && m.line <= x.span.end)
+      .sort((a, b) => b.span.start - a.span.start)[0];
+    if (!home) continue;
+    const id = m.kind === "img" ? `รูป ${++counts.img}` : `ตาราง ${++counts.table}`;
+    if (m.kind === "img") report.placedPictures++; else report.placedTables++;
+    s.media[id] = m.kind === "img" ? { kind: "img", src: m.src, name: m.name || "" } : { kind: "table", rows: m.rows };
+    (placed[home.path] ||= []).push({ line: m.line, id, skip: m.kind === "table" ? [m.line, m.line + (m.lines || 0)] : null, span: home.span });
+  }
+  const bare = (v) => strip(String(v || "").replace(MEDIA_MARK, ""));
+  const done = new Set();
+  for (const { path, span } of spansBySeg.all) {
+    const [k1, k2] = path.split(".");
+    const all = placed[path] || [];
+    const items = all.filter((it) => it.span.start === span.start);
+    const rest = all.filter((it) => !items.includes(it));
+    done.add(path);
+    let body = span.lines;
+    if (path === "methodology.literature_review") {
+      let r = body.length;
+      while (r > 0 && isCitation(body[r - 1].t)) r--;
+      if (body.length - r >= 3) {
+        const refs = body.slice(r).map((l) => strip(sub(String.raw`^(?:\[\d{1,3}\]|\d{1,3}[.)])\s*`, "", l.t)));
+        if (!s.ap02?.references?.length) s.ap02 = { ...(s.ap02 || {}), references: refs };
+        body = body.slice(0, r);
+      }
+    }
+    const out = [];
+    let n = 0;
+    for (const l of body) {
+      while (n < items.length && items[n].line <= l.i) out.push(`[[${items[n++].id}]]`);
+      if (items.some((it) => it.skip && l.i >= it.skip[0] && l.i < it.skip[1])) continue;
+      out.push(l.t);
+    }
+    while (n < items.length) out.push(`[[${items[n++].id}]]`);
+    const fromSpan = out.join("\n");
+    // a value read from a filled EC form is final: only its pictures are added
+    if (s._locked?.has(path)) { if (items.length) s[k1][k2] = [strip(s[k1][k2] || ""), ...items.map((it) => `[[${it.id}]]`)].join("\n"); }
+    else if (bare(fromSpan).length >= bare(s[k1][k2]).length) s[k1][k2] = fromSpan;
+    else if (items.length) s[k1][k2] = [strip(s[k1][k2] || ""), ...items.map((it) => `[[${it.id}]]`)].join("\n");
+    // from another file: after the text
+    if (rest.length) s[k1][k2] = [strip(s[k1][k2] || ""), ...rest.map((it) => `[[${it.id}]]`)].filter(Boolean).join("\n");
+  }
+  // pictures under a heading that only another file has
+  for (const path of Object.keys(placed)) {
+    if (done.has(path)) continue;
+    const [k1, k2] = path.split(".");
+    s[k1][k2] = [strip(s[k1][k2] || ""), ...placed[path].map((it) => `[[${it.id}]]`)].filter(Boolean).join("\n");
+  }
+  return s;
+}
+
+export function referenceList(text) {
+  // one entry per line; drop "1." / "[1]" numbering and guidance lines
+  return sectionLines(text || "", REF_START, AFTER_REF)
+    .map((l) => strip(sub(String.raw`^(?:\[\d{1,3}\]|\d{1,3}[.)])\s*`, "", l)))
+    .filter((l) => l && !search(String.raw`^(?:ระบุตาม|ใช้รูปแบบ)`, l));
+}
+
+// ---------------------------------------------------------------- budget (AP 02 ข้อ 17.2)
+
+// Grant budgets are kept by the funder's headings (ค่าจ้าง, ค่าตอบแทน, ค่าใช้สอย, ค่าวัสดุ);
+// EC asks for 8 others. Every line of the proposal's budget table is put under one EC
+// heading by its words; the researcher checks and can move a line on the main page.
+export const EC_BUDGET = [
+  ["compensation", "ค่าตอบแทนผู้เข้าร่วมการวิจัย"], ["care", "ค่าดูแลรักษาผู้เข้าร่วม"], ["supplies", "ค่าอุปกรณ์การวิจัย"],
+  ["travel", "ค่าเดินทาง / ที่พัก"], ["design", "ค่าเขียนแบบ ออกแบบ และจัดทำต้นแบบ"], ["equipment", "ค่าครุภัณฑ์"],
+  ["analysis", "ค่าวิเคราะห์ข้อมูล"], ["other", "อื่น ๆ"],
+];
+
+export function budgetCategory(text, group = "") {
+  const t = `${text} ${group}`;
+  if (search("ครุภัณฑ์", t)) return "equipment";
+  // paid to participants only; pay for assistants, experts or students is "อื่น ๆ"
+  if (search(String.raw`ค่าตอบแทน\S*\s*(?:\S+\s*)?(?:อาสาสมัคร|ผู้เข้าร่วม|ผู้ให้ข้อมูล|ผู้ตอบ|กลุ่มตัวอย่าง)|ค่าเสียเวลา|ของที่ระลึก|ของสมนาคุณ`, text)) return "compensation";
+  if (search(String.raw`ค่ารักษา|ค่าดูแล|ประกันอุบัติเหตุ|ประกันภัย|ค่าชดเชย`, text)) return "care";
+  if (search(String.raw`พาหนะ|เดินทาง|ค่าที่พัก|เบี้ยเลี้ยง|ค่าน้ำมัน|ค่าโดยสาร|เครื่องบิน|taxi|แท็กซี่`, text, "i")) return "travel";
+  if (search(String.raw`^\s*(?:\d+[.)]?\s*)?(?:ค่า)?วัสดุ`, text) || search("วัสดุ", group)) return "supplies";
+  if (search(String.raw`ต้นแบบ|ออกแบบ|เขียนแบบ|จัดทำชุด|prototype`, text, "i")) return "design";
+  if (search(String.raw`วิเคราะห์|ทดสอบ|ประมวลผล|ห้องปฏิบัติการ|\blab\b|omics|sequenc`, text, "i")) return "analysis";
+  if (search(String.raw`อุปกรณ์`, text)) return "supplies";
+  return "other";
+}
+
+const money = (t) => {
+  const s = String(t || "").replace(/\s/g, "");
+  return /^-?\d{1,3}(?:,\d{3})*(?:\.\d+)?$|^-?\d+(?:\.\d+)?$/.test(s) ? Number(s.replace(/,/g, "")) : null;
+};
+
+// { items: [{ item, detail, amount, group, cat }], total } from the most detailed budget table.
+export function budgetFromTables(tables) {
+  let best = null;
+  for (const t of tables || []) {
+    const rows = t.map((r) => r.map((c) => strip(c.text || "").replace(/\s+/g, " ")));
+    const first = rows.findIndex((r) => r.some((c) => (money(c) ?? 0) >= 100));
+    if (first <= 0) continue;
+    const ncol = Math.max(...rows.map((r) => r.length));
+    const head = (i) => rows.slice(0, first).map((r) => r[i] || "").join(" ");
+    const cols = [...Array(ncol).keys()];
+    const itemCol = cols.find((i) => search(String.raw`รายการ|รายละเอียดงบประมาณ`, head(i)) && !search("แตกตัวคูณ", head(i)));
+    if (itemCol == null) continue;
+    // the line's own amount: a "รวม" column (summing the instalments), else "งบประมาณ (บาท)",
+    // never the funder's per-heading subtotal column ("งบประมาณรวมในรายการ...")
+    const right = [...cols].reverse();
+    let amtCol = right.find((i) => search(String.raw`(?:^|\s)รวม(?:\s|$)`, head(i)) && !search("รวมใน", head(i)));
+    if (amtCol == null) amtCol = right.find((i) => search(String.raw`งบประมาณ\s*\(บาท\)`, head(i)) && !search("รวมใน", head(i)));
+    if (amtCol == null) amtCol = right.find((i) => search("จำนวนเงิน|บาท", head(i)));
+    if (amtCol == null || amtCol <= itemCol) continue;
+    const detailCol = cols.find((i) => i > itemCol && i < amtCol && search(String.raw`แตกตัวคูณ|รายละเอียด`, head(i)));
+    const items = [];
+    let group = "";
+    let total = null;
+    for (const r of rows.slice(first)) {
+      const item = r[itemCol] || "";
+      let amt = money(r[amtCol]);
+      // no amount in that column: an instalment column left of it may hold it; a number
+      // only in a column to its right is the funder's subtotal on a heading row
+      if (amt == null) amt = [...r.slice(itemCol + 1, amtCol)].reverse().map(money).find((x) => x != null) ?? null;
+      if (r.some((c) => /^รวม/.test(c) && c.length < 80)) {
+        // a total row may carry its number in any column (FF puts it in the subtotal one)
+        const nums = r.map(money).filter((x) => x != null);
+        if (nums.length) total = Math.max(total ?? 0, ...nums);
+        continue;
+      }
+      if (!amt) {
+        const g = r.find(Boolean);
+        if (g) group = g;
+        continue;
+      }
+      const detail = detailCol != null && r[detailCol] !== item ? r[detailCol] || "" : "";
+      const label = item || r.find((c) => c && money(c) == null) || "";
+      items.push({ item: label, detail, amount: amt, group, cat: budgetCategory(`${label} ${detail}`, group) });
+    }
+    if (items.length && (!best || items.length > best.items.length)) best = { items, total };
+  }
+  return best;
+}
+
+// The 8 EC headings from the lines (a heading with nothing is left empty, not 0).
+export function budgetSums(items) {
+  const out = {};
+  for (const [k] of EC_BUDGET) {
+    const sum = items.filter((x) => x.cat === k).reduce((a, x) => a + x.amount, 0);
+    out[k] = sum ? Math.round(sum * 100) / 100 : null;
+  }
+  return out;
+}
+
+// Full pipeline used by the page. `tables` and `media` (from loadDocument) are optional.
+export function extractSubmission(text, tables = [], media = [], outline = null) {
+  // the page header and footer a printed form repeats ("Version... Date... AP 02/2026",
+  // "หน้า 4 จาก 10") are never an answer: blanked, so line numbers still hold; the form
+  // reader gets the file as it is (its header names the form)
+  const raw = String(text || "");
+  text = raw.split("\n").map((l) => (PAGE_MARK.test(l.trim()) ? "" : l)).join("\n");
   const s = applyHeuristics(buildLocalSubmission(text));
+  // general pass by the document's own headings and "หัวข้อ | ค่า" rows (sections.js)
+  const sources = fillFromOutline(s, text, outline || textOutline(text), tables);
+  // a filled EC form read back by the forms' own labels replaces the guesses
+  const noForm = typeof process !== "undefined" && process.env?.EC_NO_FORM; // for before/after measurements
+  const rulePi = s.principal_investigator.title_th; // the recipient was copied from this
+  const form = noForm ? null : readEcForm(s, raw, tables, parseDate);
+  if (form) {
+    for (const p of form.paths) if (!(p in form.found)) delete sources[p]; // blank on the form
+    for (const p of Object.keys(form.found)) sources[p] = { form: form.form };
+    Object.defineProperty(s, "_locked", { value: new Set([...Object.keys(form.found), ...form.paths]), enumerable: false, configurable: true });
+    // the declarations follow the names read from the form
+    s.coi_declarations = [s.principal_investigator, ...s.co_investigators]
+      .map((p) => p.title_th || p.name_en).filter(Boolean)
+      .map((name) => ({ ...clone(DEFAULTS.coi), person_name: name }));
+  }
+  Object.defineProperty(s, "_sources", { value: sources, enumerable: false, configurable: true });
   const plan = planFromTables(tables);
   if (plan.length) s.ap02 = { ...(s.ap02 || {}), timeline: plan };
+  const refs = referenceList(text);
+  if (refs.length && !s._locked?.has("ap02.references")) s.ap02 = { ...(s.ap02 || {}), references: refs };
+  fillSections(s, text, media);
+  // titles labelled "ชื่อโครงการ (ไทย): ..." / "(ชื่อภาษาอังกฤษ) ..." / "Title (EN): ..."; a form
+  // code or a dotted blank picked up as a title is dropped
+  const badTitle = (t) => !t || /^(?:AP\s*0\d|FEE\/|Version\b|แบบเสนอ|แบบรายงาน|[.…\s]+$)/i.test(String(t).trim());
+  for (const [key, lang] of [["title_th", String.raw`ไทย|Thai`], ["title_en", String.raw`อังกฤษ|English`]]) {
+    if (!badTitle(s.meta[key]) || s._locked?.has(`meta.${key}`)) continue;
+    const m = search(String.raw`^\s*\(?(?:ชื่อ(?:โครงการ(?:วิจัย)?|เรื่อง)?)?\s*\(?(?:ภาษา)?(?:${lang})\)?\s*[:：]?\s*(.{6,})$`, text, "im");
+    s.meta[key] = m && !badTitle(m[1]) ? strip(m[1]) : badTitle(s.meta[key]) ? "" : s.meta[key];
+  }
+  // unlabelled titles right under a "ชื่อโครงการวิจัย (Title)" heading: Thai line, then Latin line
+  if (badTitle(s.meta.title_th) || badTitle(s.meta.title_en)) {
+    const ls = splitlines(text).map((l) => strip(l));
+    const h = ls.findIndex((l) => /^(?:\d{1,2}\.\s*)?ชื่อ(?:โครงการ|เรื่อง)(?:วิจัย)?(?:และนวัตกรรม)?\s*(?:\(Title\))?$/i.test(l) || /^(?:\d{1,2}\.\s*)?(?:project |research )?title$/i.test(l));
+    for (const l of h >= 0 ? ls.slice(h + 1, h + 4) : []) {
+      if (!l || l.length < 8 || badTitle(l) || /^\d{1,2}\.\s/.test(l)) continue;
+      if (/[ก-๙]/.test(l) && badTitle(s.meta.title_th)) s.meta.title_th = l;
+      else if (!/[ก-๙]/.test(l) && badTitle(s.meta.title_en)) s.meta.title_en = l;
+    }
+  }
+  // the official forms' guidance sentences are never part of an answer
+  for (const grp of ["methodology", "risks", "benefits", "data_management", "layman"]) {
+    for (const [k, v] of Object.entries(s[grp] || {})) {
+      if (!noForm && typeof v === "string" && v.length >= 25 && !s._locked?.has(`${grp}.${k}`)) s[grp][k] = stripFormText(v);
+    }
+  }
+  // On a filled EC form, a guess of the other rules for a place the form has, made only of
+  // the form's own words, dotted blanks and pieces of its labels ("ยินยอม", "ลายมือชื่อ",
+  // "ขอความยินยอมเมื่อไร ที่ใด (ระ..."), is the form's empty place, not an answer.
+  if (form) {
+    const words = FORM_LABELS.filter((e) => e.form === form.form).map((e) => e.label.replace(/\s+/g, ""));
+    const formWord = (l) => { const n = l.replace(/\s+/g, ""); return !n || /^[.…_\-–\s]*$/.test(n) || words.some((w) => w.includes(n) || (n.length >= 6 && w.startsWith(n.slice(0, 12)))); };
+    for (const path of new Set(FORM_LABELS.filter((e) => e.form === form.form && e.path).map((e) => e.path))) {
+      const [k1, k2] = path.split(".");
+      const v = s[k1]?.[k2];
+      if (typeof v !== "string" || !v.trim() || s._locked?.has(path)) continue;
+      if (v.split("\n").every(formWord)) { s[k1][k2] = ""; delete sources[path]; }
+    }
+  }
+  // a short value the label rules cut out of the middle of a sentence or a table row
+  // ("MLO) | PLOs ที่เกี่ยวข้อง" after "Outcome-based") is not an answer
+  for (const k of ["outcome_measures", "research_field", "consent_process", "sample_size_calculation", "recruitment_process"]) {
+    const v = s.methodology[k];
+    const t = typeof v === "string" ? v.trim() : "";
+    // a ")" before any "(" means the value starts inside a bracket ("based Credibility)")
+    const opensInside = t.indexOf(")") >= 0 && (t.indexOf("(") < 0 || t.indexOf(")") < t.indexOf("("));
+    // "Outcome-based ..." read as the label "Outcome" and the value "based ..."
+    const compoundTail = /^(?:based|oriented|driven|centered|centred|focused)\b/i.test(t);
+    if (t && (/^[)\]|,.;:–-]/.test(t) || t.includes(" | ") || opensInside || compoundTail) && !s._locked?.has(`methodology.${k}`)) {
+      if (typeof process !== "undefined" && process.env?.EC_DEBUG_DROP) console.log(`drop ${k}: ${t.slice(0, 100)}`);
+      s.methodology[k] = "";
+    }
+  }
+  // an EC form already has the 8 headings; only a proposal's own budget table is mapped
+  const budget = [...(s._locked || [])].some((p) => p.startsWith("ap02.budget.")) ? null : budgetFromTables(tables);
+  if (budget) {
+    s.ap02 = { ...(s.ap02 || {}), budget_items: budget.items, budget: { ...(s.ap02?.budget || {}), ...budgetSums(budget.items) } };
+    if (s.funding.amount_baht == null && budget.total) s.funding.amount_baht = budget.total;
+  }
+  // People. A "name" that is really a run of form text ("หรือ หัวหน้าโครงการวิจัย ตำแหน่ง...",
+  // "ลำดับ | ...", "AP 01_2/2024") is not a person: the PI is taken from the form's person card
+  // ("ตำแหน่งวิชาการ-ยศ-ชื่อ-สกุล | ชื่อ") or "ผู้วิจัยหลัก: ชื่อ", or left for the researcher;
+  // such entries are dropped from the team; an English name in brackets goes to name_en.
+  const LABEL_WORDS = /ตำแหน่งวิชาการ|ชื่อ\s*-\s*สกุล|หัวหน้าโครงการ|ผู้วิจัยหลัก|ผู้วิจัยร่วม|สาขาวิชา|ลำดับ|ที่ปรึกษา|วันที่|ลงนาม|ความเห็น|AP\s*0\d|ระบุชื่อ|ไม่มี|โครงการวิจัย|\.{3}|…|\|/;
+  const PERSON = /^(?:นาย|นาง|นางสาว|น\.ส\.|ดร\.?|อ\.|อาจารย์|ผศ\.?|รศ\.?|ศ\.|ผู้ช่วยศาสตราจารย์|รองศาสตราจารย์|ศาสตราจารย์|พ\.?ต\.?|ร\.?ต\.?|Dr\.?|Mr\.?|Mrs\.?|Ms\.?|Prof\.?|Asst\.?|Assoc\.?)|^[ก-๙]{2,}\s+[ก-๙]{2,}$/;
+  const isPerson = (n) => Boolean(n) && n.length <= 70 && !LABEL_WORDS.test(n) && PERSON.test(n.trim());
+  const splitName = (p) => {
+    const m = String(p.title_th || "").match(/^([^(]*[ก-๙][^(]*?)\s*(?:\((.+?)\)|((?:Asst\.|Assoc\.|Prof\.|Dr\.|Mr\.|Mrs\.|Ms\.)[A-Za-z .,'-]+))\s*$/);
+    if (m) { p.title_th = strip(m[1]); if (!p.name_en) p.name_en = strip(m[2] || m[3]); }
+    return p;
+  };
+  const pi = splitName(s.principal_investigator);
+  pi.title_th = strip(String(pi.title_th || "").replace(/[\s—–-]+$/, ""));
+  for (const p of [pi, ...(s.co_investigators || []), ...(s.advisors || [])]) {
+    if (p.name_en && (/Investigator|Advisor|Coordinator|\|/i.test(p.name_en) || p.name_en.length > 60)) p.name_en = "";
+  }
+  if (!isPerson(pi.title_th)) {
+    const card = search(String.raw`^\s*ตำแหน่งวิชาการ\S*ชื่อ\S*สกุล\s*(?:\|\s*)?([^|\n]{3,60})`, text, "m");
+    const m = search(String.raw`^\s*(?:ผู้วิจัยหลัก|หัวหน้าโครงการ)\s*[:：]\s*([^(—|\n]{3,60})`, text, "m");
+    // "... ชื่อ-สกุล นางสาว ก ข สังกัดหน่วยงาน ..." inside one cell
+    const inner = search(String.raw`ชื่อ\s*-\s*สกุล\s*[:：]?\s*((?:นาย|นาง|นางสาว|ดร\.|อ\.|อาจารย์|ผศ\.|รศ\.|ศ\.|ผู้ช่วยศาสตราจารย์|รองศาสตราจารย์)[^|\n]{2,50}?)(?=\s+(?:สังกัด|สาขา|หน่วยงาน|เบอร์|โทร|อีเมล|Email)|\s*\||\s*$)`, text, "m");
+    const name = [card?.[1], m?.[1], inner?.[1]].map((x) => strip(x || "")).find(isPerson) || "";
+    pi.title_th = name;
+    if (!name) pi.affiliation = LABEL_WORDS.test(pi.affiliation || "") ? "" : pi.affiliation;
+  }
+  for (const k of ["co_investigators", "advisors"]) {
+    s[k] = (s[k] || []).map(splitName).filter((p) => isPerson(p.title_th) || isPerson(p.name_en));
+  }
+  // the declarations (AP 01_2) are one per person of the team
+  s.coi_declarations = [pi, ...s.co_investigators].map((p) => p.title_th || p.name_en).filter(Boolean)
+    .map((name) => ({ ...clone(DEFAULTS.coi), person_name: name }));
+  // the grant recipient defaults to the PI: follow the corrected name, unless the file
+  // named the recipient itself (AP 01_1 ข้อ 2.2)
+  if (!s._locked?.has("funding.recipient_name") && (!s.funding.recipient_name || s.funding.recipient_name === rulePi)) {
+    s.funding.recipient_name = pi.title_th;
+    if (pi.status) s.funding.recipient_status = pi.status;
+  }
   s._fee = computeFee(s);
   s._forms = selectForms(s);
   return s;
+}
+
+// ---------------------------------------------------------------- several files
+
+// Several files (a proposal and filled EC forms, or AP 01_1 + AP 02 + ...): each is read
+// on its own, so a heading or a form label never runs from one file into the next, then
+// the results are joined field by field. A value read from a filled EC form wins; else the
+// first file that answers a field wins and later files fill the gaps. `docs` are
+// loadDocument results; returns { submission, text, outline } with the joined text and
+// outline (headings by line in that text) for the page.
+export function extractSubmissions(docs) {
+  const parts = [];
+  const texts = [];
+  const outline = [];
+  let offset = 0;
+  const counts = { รูป: 0, ตาราง: 0 };
+  for (const d of docs) {
+    const s = extractSubmission(d.text, d.tables || [], d.media || [], d.outline || null);
+    // pictures and tables are numbered from 1 in each file: number them on
+    const shift = { ...counts };
+    const renum = (v) => typeof v === "string" ? v.replace(MEDIA_MARK, (_, k, n) => `[[${k} ${Number(n) + shift[k]}]]`)
+      : Array.isArray(v) ? v.map(renum)
+        : v && typeof v === "object" ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, renum(x)])) : v;
+    const media = {};
+    for (const [id, m] of Object.entries(s.media || {})) {
+      const [k, n] = id.split(" ");
+      media[`${k} ${Number(n) + shift[k]}`] = m;
+      counts[k] = Math.max(counts[k], Number(n) + shift[k]);
+    }
+    const r = renum(s);
+    if (s.media) r.media = media;
+    const sources = {};
+    for (const [p, src] of Object.entries(s._sources || {})) sources[p] = src.heading != null ? { ...src, heading: src.heading + outline.length } : src;
+    parts.push({ s: r, sources, locked: s._locked || new Set(), report: s._mediaReport });
+    const own = d.outline || textOutline(d.text);
+    outline.push(...own.map((h) => ({ ...h, line: h.line + offset })));
+    texts.push(d.text);
+    offset += d.text.split("\n").length + 1;
+  }
+  const text = texts.join("\n\n");
+  if (parts.length === 1) {
+    const s = parts[0].s;
+    for (const [k, v] of [["_sources", parts[0].sources], ["_locked", parts[0].locked], ["_mediaReport", parts[0].report]]) {
+      if (v) Object.defineProperty(s, k, { value: v, enumerable: false, configurable: true });
+    }
+    return { submission: s, text, outline };
+  }
+
+  const locked = new Set();
+  const sources = {};
+  const isLocked = (part, path) => [...part.locked].some((p) => path === p || path.startsWith(`${p}.`));
+  const def = (path) => path.split(".").reduce((x, k) => (x == null ? undefined : x[k]), DEFAULTS.submission);
+  const blank = (v, path) => v == null || v === "" || (typeof v === "string" && !strip(v))
+    || (Array.isArray(v) && !v.length) || JSON.stringify(v) === JSON.stringify(def(path));
+  const marks = (v) => (typeof v === "string" ? v.match(MEDIA_MARK) || [] : []);
+  const plain = (v) => v && typeof v === "object" && !Array.isArray(v);
+  const keysAt = (path) => [...new Set(parts.flatMap((p) => {
+    const v = path ? path.split(".").reduce((x, k) => (x == null ? undefined : x[k]), p.s) : p.s;
+    return plain(v) ? Object.keys(v) : [];
+  }))];
+  const at = (part, path) => path.split(".").reduce((x, k) => (x == null ? undefined : x[k]), part.s);
+  const merge = (path) => {
+    const vals = parts.map((p) => at(p, path));
+    if (vals.some(plain) && !vals.some((v) => v != null && !plain(v))) {
+      return Object.fromEntries(keysAt(path).map((k) => [k, merge(`${path}.${k}`)]));
+    }
+    // a filled form's answer, then the first file's, then the later ones'
+    // a field one filled form has (even blank) is never filled from another form's guesses
+    // (AP 01_1 has no ข้อ 2 สาขาวิชา of AP 02); a proposal file may fill it
+    const formHas = parts.some((p) => isLocked(p, path));
+    const order = [...parts.keys()].filter((i) => !formHas || isLocked(parts[i], path) || !parts[i].locked.size)
+      .sort((a, b) => Number(isLocked(parts[b], path)) - Number(isLocked(parts[a], path)) || a - b);
+    const win = order.find((i) => !blank(vals[i], path)) ?? order[0] ?? 0;
+    let v = vals[win];
+    if (isLocked(parts[win], path)) locked.add(path);
+    if (parts[win].sources[path]) sources[path] = parts[win].sources[path];
+    // pictures another file has under the same heading: after the text
+    if (typeof v === "string") {
+      const more = parts.flatMap((p, i) => (i === win ? [] : marks(vals[i]))).filter((m) => !v.includes(m));
+      if (more.length) v = [strip(v), ...more].filter(Boolean).join("\n");
+    }
+    return v;
+  };
+  const s = Object.fromEntries(keysAt("").map((k) => [k, merge(k)]));
+  s.media = Object.assign({}, ...parts.map((p) => p.s.media || {}));
+  if (!Object.keys(s.media).length) delete s.media;
+  // fields worked out from the others
+  s.coi_declarations = [s.principal_investigator, ...s.co_investigators].map((p) => p.title_th || p.name_en).filter(Boolean)
+    .map((name) => ({ ...clone(DEFAULTS.coi), person_name: name }));
+  applyHeuristics(s);
+  s._fee = computeFee(s);
+  s._forms = selectForms(s);
+  const report = parts.map((p) => p.report).filter(Boolean).reduce((a, r) => ({
+    pictures: a.pictures + r.pictures, tables: a.tables + r.tables, placedPictures: a.placedPictures + r.placedPictures,
+    placedTables: a.placedTables + r.placedTables, unusable: [...a.unusable, ...r.unusable],
+  }), { pictures: 0, tables: 0, placedPictures: 0, placedTables: 0, unusable: [] });
+  for (const [k, v] of [["_sources", sources], ["_locked", locked], ["_mediaReport", report]]) {
+    Object.defineProperty(s, k, { value: v, enumerable: false, configurable: true });
+  }
+  return { submission: s, text, outline };
 }
